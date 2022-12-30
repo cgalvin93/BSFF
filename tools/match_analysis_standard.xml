@@ -1,0 +1,24 @@
+<ROSETTASCRIPTS>
+  <SCOREFXNS>
+    <ScoreFunction name="beta" weights="ref2015"/>
+  </SCOREFXNS>
+  <RESIDUE_SELECTORS>
+    <Chain name="chX" chains="X"/>
+  </RESIDUE_SELECTORS>
+  <TASKOPERATIONS>
+  </TASKOPERATIONS>
+  <FILTERS>
+    <DSasa name="dsasa" confidence="0.0"/>
+  </FILTERS>
+  <SIMPLE_METRICS>
+    <SasaMetric name="lig_sasa" residue_selector="chX" sasa_metric_mode="all_sasa" />
+  </SIMPLE_METRICS>
+  <MOVERS>
+    <RunSimpleMetrics name="run_metrics1" metrics="lig_sasa" prefix="ligsasa"/>
+  </MOVERS>
+  <PROTOCOLS>
+    <Add filter_name="dsasa"/>
+    <Add mover_name="run_metrics1"/>
+  </PROTOCOLS>
+  <OUTPUT/>
+</ROSETTASCRIPTS>
