@@ -722,25 +722,13 @@ scores
 scores
 bad
 scores
-64804
-144502
-144502
-32409
-182563
+63248
+94463
+94461
+31639
+131638
 
-b5
-59186
-141101
-141092
-29631
-175261
 
-b6
-2097
-46212
-46212
-1048
-47387
 '''
 
 
@@ -792,63 +780,24 @@ def return_filtered(scores,term,condition,threshold):
             print(d)
     return filtered_scores
 
-f1=return_filtered(scores,'buns2interface','<',0.0)
-f2=return_filtered(f1,'lighphobesasa','<',40.0)
+f1=return_filtered(scores,'buns2interface','<',1.0)
+f2=return_filtered(f1,'lighphobesasa','<',25.0)
 f3=return_filtered(f2,'hbtolig','>',3.0)
 f4=return_filtered(f3,'ligoversat','<',0.0)
-f5=return_filtered(f4,'bsE_per_res','<',-2.0)
+# f5=return_filtered(f4,'bsE_per_res','<',-2.0)
 # plot_dists(terms,f3,'esl4rmfilt.pdf')
 print(len(scores))
 print(len(f1))
 print(len(f2))
 print(len(f3))
 print(len(f4))
-print(len(f5))
+# print(len(f5))
 '''
-235413
-36795
-24301
-19609
-
-batch4
-182563
-30426
-20659
-16699
-16683
-12027
-
-b5
-175261
-24165
-12829
-7734
-7723
-5490
-
-b6
-47387
-3883
-1427
-533
-530
-97
-
-des1
-19329
-1970
-527
-226
-225
-51
-
-des2
-17044
-1843
-486
-274
-271
-53
+131638
+57852
+23261
+11559
+11547
 '''
 import os
 filtered_strc=[]
@@ -864,21 +813,15 @@ for i in filtered_strc:
     print(str(c))
 os.system('mv *.pdf filtered/')
 
-# l=[i for i in os.listdir() if i[-3:]=='pdb']
-# l[:100]
-# filtered_strc[:100]
 '''
 cd filtered
 
 scp cgalvin@log2.wynton.ucsf.edu:/wynton/home/kortemme/cgalvin/esl/1np3hb/1np/buried/genpot/clean/ed1/esl_4rm.pdf ~/desktop/esl_4rm.pdf
-'''
 
-
-'''
 ADD CORRECT DIRECTORY TO BOTTOM OF CODE HERE (EXCEPT LINE)
 cd filtered
 pwd
-/wynton/home/kortemme/cgalvin/esl1/1np3hb/1np/buried/genpot/clean/ed3/filtered
+/wynton/home/kortemme/cgalvin/esl4rm_1_bestmatches/enzdes/filtered
 
 echo "
 import os
@@ -924,7 +867,7 @@ for initial_match in pdbs:
         newpdb.close()
         os.chdir('..')
     except:
-        os.chdir('/wynton/home/kortemme/cgalvin/esl1/1np3hb/1np/buried/genpot/clean/no_problematic_res/has_aro_hbond/cm1/low_designs/filtered')
+        os.chdir('/wynton/home/kortemme/cgalvin/esl4rm_1_bestmatches/enzdes/filtered')
 ">makeparams.py
 
 echo '
@@ -971,41 +914,6 @@ for i in l:
 
 cd run
 '''
-# #run the extra scoring
-# import os
-# params=[i for i in os.listdir() if i[-6:]=='params']
-# paramspath=params[0]
-#
-# pdbs=[i for i in os.listdir() if i[-3:]=='pdb']
-# #
-# sf=open('extrascore.sh','w')
-# sf.write('#!/bin/bash')
-# sf.write('\n')
-# sf.write('tasks=(0\n')
-# for match in pdbs[:-1]:
-#     sf.write('       '+match+'\n')
-# sf.write('       '+pdbs[-1]+')')
-# sf.write('\n')
-# sf.write('\n/wynton/home/kortemme/cgalvin/main/source/bin/rosetta_scripts.default.linuxgccrelease -in:file:s=${tasks[$SGE_TASK_ID]} -parser:protocol /wynton/home/kortemme/cgalvin/BSFF/tools/ligbinderanalysis_jump1.xml -in:file::extra_res_fa '+paramspath+' -ignore_unrecognized_res -load_PDB_components False -scorefile_format json -out:file:score_only scores.json -run:nblist_autoupdate -parser:view -jd2:ntrials=1 -packing:no_optH=false -packing:flip_HNQ -packing:extrachi_cutoff=1 -packing:use_input_sc -packing:linmem_ig=10 -packing:ex1 -packing:ex2 -corrections:score:no_his_his_pairE -corrections:score:lj_hbond_hdis=1.75 -corrections:score:lj_hbond_OH_donor_dis=2.6 -enzdes:bb_min_allowed_dev=0.05 -enzdes:detect_design_interface -enzdes:cut1=4 -enzdes:cut2=6 -enzdes:cut3=8 -enzdes:cut4=10')
-# sf.write('\nqstat -j "$JOB_ID"')
-# sf.close()
-# #
-# print(len(pdbs))
-'''
-qsub -cwd -t 1-1805 -l mem_free=2G extrascore.sh
-        took about an hour per job
-
-
-'''
-
-
-
-
-
-
-
-
-
 import os
 #################################################################################
 params=[i for i in os.listdir() if i[-6:]=='params']
