@@ -923,17 +923,10 @@ sfname='extrascore.sh'
 matches=[i for i in os.listdir() if i[-3:]=='pdb']
 print(len(matches))
 '''
-batch 1-3
-243698
-
-batch 4
-11990
-
-5
-5479
+11522
 '''
 count=1
-idx=[j for j in range(0,len(matches),1)]  #how many per job
+idx=[j for j in range(0,len(matches),3)]  #how many per job
 if len(matches) not in idx:
     idx.append(len(matches))
 for ei, ix in enumerate(idx[:-1]):
@@ -964,31 +957,10 @@ for j in jobss:
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+'''
+/wynton/home/kortemme/cgalvin/esl4rm_1_bestmatches/enzdes/filtered/analysis/run
 
 '''
-/wynton/home/kortemme/cgalvin/esl1/1np3hb/1np/buried/genpot/clean/ed2/filtered/analysis/run
-'''
-
 #analysis of scores from json file
 sfname='scores.json'
 import json
@@ -1324,18 +1296,13 @@ scores
 scores
 bad
 scores
-13
-11699
-11699
-6
-11708
+10
+11414
+11414
+5
+11417
 
-batch5
-1
-5421
-5421
-0
-5422
+
 '''
 #make a pdf showing all score distributions
 ######
@@ -1362,9 +1329,7 @@ def plot_dists(terms,scores,outfilename):
     pdf.close()
 
 # plot_dists(terms,scores,'4rm_testrun.pdf')
-'''
-scp cgalvin@log2.wynton.ucsf.edu:/wynton/home/kortemme/cgalvin/dog/test_idealized_hbonds/design/dog_ideal_fd/filtered/dog_idel_fd_filt_extrascores.pdf ~/desktop/dog_idel_fd_filt_extrascores.pdf
-'''
+
 def return_filtered(scores,term,condition,threshold):
     filtered_scores=[]
     for d in scores:
@@ -1385,11 +1350,11 @@ def return_filtered(scores,term,condition,threshold):
     return filtered_scores
 
 #
-f1=return_filtered(scores,'buns2interface','<',10.0)
+f1=return_filtered(scores,'buns2interface','<',1.0)
 f2=return_filtered(f1,'boltz','<',-0.3)
-f3=return_filtered(f2,'ddg','<',-24.0)
-f4=return_filtered(f3,'contact_molsurf','>',160)
-f5=return_filtered(f4,'hbtolig','>',3.0)
+f3=return_filtered(f2,'ddg','<',-22.0)
+f4=return_filtered(f3,'contact_molsurf','>',165)
+f5=return_filtered(f4,'hbtolig','>',2.0)
 f6=return_filtered(f5,'shape_comp','>',0.65)
 f7=return_filtered(f6,'lighphobesasa','<',40.0)
 f8=return_filtered(f7,'packstat','>',0.6)
@@ -1418,69 +1383,22 @@ print(len(f12))
 print(len(f13))
 print(len(f14))
 '''
-first go up to f7
-19457
-14850
-3965
-3003
-2271
-2247
-1344
-1247
-
-second go looking for expression candidates, up to f14
-11708
-8851
-4151
-1827
-1594
-1587
-1194
-1116
-628
-541
-248
+11417
+8739
+1131
+833
+533
+523
+455
+455
+----
+291
 246
-236
-201
-189
-
-
-batch4
-11708
-8851
-4151
-2337
-1973
-1959
-1443
-1442
-804
-688
-570
-565
-532
-483
-478
-
-
-b5
-5422
-2837
-296
-172
-137
-118
-102
-102
-57
-40
-25
-25
-25
-16
-16
-
+123
+122
+109
+82
+82
 '''
 import os
 filtered_strc=[]
@@ -1526,21 +1444,10 @@ print(len(set(motifs)))
 print(len(set(scaffs)))
 print(len(set(pairs)))
 '''
-scp -r cgalvin@log2.wynton.ucsf.edu:/wynton/home/kortemme/cgalvin/esl/1np3hb/1np/buried/genpot/clean/ed1/filtered/analysis/run/filtered2 ~/desktop/esl4rmfilt
-42
-265
-456
-
-333
-29
-127
-178
-
-102
-23
-69
-83
-
+455
+19
+167
+245
 '''
 same_scaff_diff_match={}
 for scaff in set(scaffs):
@@ -2144,6 +2051,9 @@ EXAMPLE OF FIXED POSITIONS DICT
 
 in this case i already applied dsasa filter and found buried matches
 so i just need to identify the designable residues
+
+
+/wynton/home/kortemme/cgalvin/esl4rm_1_bestmatches/enzdes/filtered/analysis/run/filtered2
 '''
 # prm1='/wynton/home/kortemme/cgalvin/dog/Inputs/Rosetta_Inputs/dog.params'
 # ofjsonname='mpnn_params.json'
@@ -2227,12 +2137,14 @@ so i just need to identify the designable residues
 ################
 ################
 ################
+'''
+echo "
 import os
 from pyrosetta import*
 import json
 init('-load_PDB_components False -gen_potential')
 ##########
-allparams=[i for i in os.listdir() if i[-6:]=='params']
+allparams=[os.path.join('/wynton/home/kortemme/cgalvin/esl4rm_1_bestmatches/enzdes/filtered/analysis/run',i) for i in os.listdir('/wynton/home/kortemme/cgalvin/esl4rm_1_bestmatches/enzdes/filtered/analysis/run') if i[-6:]=='params']
 prm1=allparams[0]
 ofjsonname='mpnn_params.json'
 # sf = ScoreFunction()
@@ -2275,6 +2187,30 @@ for pdb in pdbs:
     neighborhood_selector_bool = neighborhood_selector.apply(p)
     neighborhood_residues_resnums = pyrosetta.rosetta.core.select.get_residues_from_subset(neighborhood_selector_bool)
     first_shell_res=list(neighborhood_residues_resnums)
+    #################
+    print(first_shell_res)
+    for residd in first_shell_res:
+        individual_res_selector=pyrosetta.rosetta.core.select.residue_selector.ResidueIndexSelector()
+        individual_res_selector.set_index(residd)
+        individual_res_selector.apply(p)
+        sasa_metric = pyrosetta.rosetta.core.simple_metrics.metrics.SasaMetric()
+        sasa_metric.set_residue_selector(individual_res_selector)
+        this_res_sasa = sasa_metric.calculate(p)
+        if this_res_sasa>=12.:
+            first_shell_res.remove(residd)
+    print(first_shell_res)
+    #this is one of those stupid instances wbere i have to filter a list twice
+    #for no apparent reason, pisses me off -.-
+    for residd in first_shell_res:
+        individual_res_selector=pyrosetta.rosetta.core.select.residue_selector.ResidueIndexSelector()
+        individual_res_selector.set_index(residd)
+        individual_res_selector.apply(p)
+        sasa_metric = pyrosetta.rosetta.core.simple_metrics.metrics.SasaMetric()
+        sasa_metric.set_residue_selector(individual_res_selector)
+        this_res_sasa = sasa_metric.calculate(p)
+        if this_res_sasa>=12.:
+            first_shell_res.remove(residd)
+    print(first_shell_res)
     ###############
     for resnum in range(1,p.total_residue()):
         if resnum not in first_shell_res:
@@ -2285,9 +2221,7 @@ for pdb in pdbs:
 print(len(list(tfdata.keys())))
 json.dump(tfdata,open(ofjsonname,'w'))
 print('json output')
-'''
-MPNN WITH CONSTRAINTS
-'''
+
 
 #copy pdbs to new directory
 #excluding the ligand
@@ -2303,7 +2237,27 @@ for i in l:
         of.write(line)
     of.close()
 
-os.chdir('mpnn')
+
+">maked.py
+
+echo "
+#!/bin/bash
+source ~/anaconda3/etc/profile.d/conda.sh
+conda activate pyr37
+time python maked.py
+">maked.sh
+
+
+
+qsub -cwd maked.sh
+
+
+
+
+
+cd mpnn
+'''
+
 #making the folders with the pdbs
 #in this case i have to do 1 per job cus each file will
 #have different fixed positions
@@ -2337,6 +2291,7 @@ for x in range(0,nstrc,n_strc_per_job):
         for y in strcset:
             os.system('mv '+y+' '+currdirname+'/'+y.split('/')[-1])
         c+=1
+
 
 
 #making the fixed position dictionaries and putting them in the
