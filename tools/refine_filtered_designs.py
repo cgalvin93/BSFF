@@ -40,15 +40,27 @@ Different types of residues (such as proline) are likely to be found in the edge
 IN ADDITION, THERE ARE THE MATTERS OF ADDRESSING
     exposed hydrophobics
     making small res bigger (perhaps also taking into account ss pref here)
-
+-----------------------------------------------------------------------------
+FINALLY, THIS IS ONLY CAPABLE OF FIXING 1 MISSING LIG HB AT THE MOMENT
+    because it doesnt actually check for hbonds between ptn and lig missing atom,.
+    it just finds a mutation that creates a new ptn-lig hbond
+1.3.2023
+    CHANGED IT SO THAT IT ITERATES THRU THE HB MUT PROCESS
+    FOR AS MANY TIMES AS THERE ARE UNSAT LIG ATOMS
+    IN THIS WAY I THINK IT IS NOW TECHNICALLY CAPABLE OF FINDING MUTATIONS TO
+    SATISFY ALL SUCH CASES 
+-----------------------------------------------------------------------------
 
 
 
 '''
-prm1='/Users/student/desktop/esl.params'
+import sys
+prm1=sys.argv[1]
+pdb=sys.argv[2]
+curr_soln_dirname=sys.argv[3]
 #
 import os
-l=[i for i in os.listdir() if i[-3:]=='pdb']
+# l=[i for i in os.listdir() if i[-3:]=='pdb']
 #
 from pyrosetta import *
 from pyrosetta.toolbox import mutate_residue
@@ -57,106 +69,105 @@ init('-load_PDB_components False -ex1 -ex2')
 #
 sf=get_fa_scorefxn()
 #
-polar_res=['S','T','Y','K']
-polar_residues=['SER','THR','ARG','LYS','ASN','GLN','ASP','GLU']
-npres=['L','I','V','F']
+polar_res=['S','T','Y','K'] #res to mutate to looking for new hbonds
+polar_residues=['SER','THR','ARG','LYS','ASN','GLN','ASP','GLU'] #res to find in bs and try mutate to np if not hbonding
+npres=['L','I','V','F'] #npres to mutate to
 #
 #
-test_count=1
+# test_count=1
 #
 noligunsats=[]
 nouseless_buried_polar=[]
-for pdb in l[:10]:
-    curr_soln_dirname='temp_solutions_'+str(test_count)
+if not os.path.exists(curr_soln_dirname):
     os.makedirs(curr_soln_dirname,exist_ok=True)
-    test_count+=1
-    #load pose
-    lig=[prm1]
-    p=Pose()
-    generate_nonstandard_residue_set(p,lig)
-    pose_from_file(p, pdb)
-    p.update_residue_neighbors()
-    #identify first shell residues
-    ligand_residue_selector = pyrosetta.rosetta.core.select.residue_selector.ChainSelector('X')
-    neighborhood_selector = pyrosetta.rosetta.core.select.residue_selector.NeighborhoodResidueSelector(ligand_residue_selector, 10., False)
-    neighborhood_selector_bool = neighborhood_selector.apply(p)
-    neighborhood_residues_resnums = pyrosetta.rosetta.core.select.get_residues_from_subset(neighborhood_selector_bool)
-    first_shell_res=list(neighborhood_residues_resnums)
-    #get the sasa of first shell res to make sure they're facing binding site
-    print(first_shell_res)
-    for residd in first_shell_res:
-        individual_res_selector=pyrosetta.rosetta.core.select.residue_selector.ResidueIndexSelector()
-        individual_res_selector.set_index(residd)
-        individual_res_selector.apply(p)
-        sasa_metric = pyrosetta.rosetta.core.simple_metrics.metrics.SasaMetric()
-        sasa_metric.set_residue_selector(individual_res_selector)
-        this_res_sasa = sasa_metric.calculate(p)
-        if this_res_sasa>=12.:
-            first_shell_res.remove(residd)
-    print(first_shell_res)
-    #this is one of those stupid instances wbere i have to filter a list twice
-    #for no apparent reason, pisses me off -.-
-    for residd in first_shell_res:
-        individual_res_selector=pyrosetta.rosetta.core.select.residue_selector.ResidueIndexSelector()
-        individual_res_selector.set_index(residd)
-        individual_res_selector.apply(p)
-        sasa_metric = pyrosetta.rosetta.core.simple_metrics.metrics.SasaMetric()
-        sasa_metric.set_residue_selector(individual_res_selector)
-        this_res_sasa = sasa_metric.calculate(p)
-        if this_res_sasa>=12.:
-            first_shell_res.remove(residd)
-    print(first_shell_res)
-    #find whether all ligand polar atoms hbond
-    hbond_set = rosetta.core.scoring.hbonds.HBondSet()
-    p.update_residue_neighbors()
-    rosetta.core.scoring.hbonds.fill_hbond_set(p, False, hbond_set)
-    #get atom indices of ligand polar atoms in network pose
-    lig_pol_atoms=[]
-    for i in range(1,len(p.residue(p.total_residue()).atoms())+1):
-        s=str(p.residue(p.total_residue()).atom_type(i))
-        ligatom=(s.split('\n'))[0].split('Atom Type:')[1].strip()
-        if ligatom=='OOC' or ligatom=='OH' or ligatom=='Nbb' or ligatom=='NLys':
-            lig_pol_atoms.append(i)
-            print(ligatom)
-    #identify any ligand polar atoms with no hbonds
-    hbond_data=[]
-    residues_hb_with_lig=[]
-    s=p.sequence()
-    if hbond_set.nhbonds()>0:
-        for hbond_index in range(1,hbond_set.nhbonds()+1):
-            drip=hbond_set.hbond(hbond_index).don_res_is_protein()
-            arip=hbond_set.hbond(hbond_index).acc_res_is_protein()
-            if drip==True and arip==True:
-                continue
-            donres_ind=int(hbond_set.hbond(hbond_index).don_res())
-            accres_ind=int(hbond_set.hbond(hbond_index).acc_res())
-            acc_atom_index=int(hbond_set.hbond(hbond_index).acc_atm())
-            donh_atom_index=int(hbond_set.hbond(hbond_index).don_hatm())
-            don_atom_index=int(p.residue(donres_ind).first_adjacent_heavy_atom(donh_atom_index))
-            if drip==True and accres_ind==p.total_residue():
-                hbond_data.append(acc_atom_index)
-                residues_hb_with_lig.append(donres_ind)
-            elif drip==False and donres_ind==p.total_residue():
-                hbond_data.append(don_atom_index)
-                residues_hb_with_lig.append(accres_ind)
-    unsat_lig_atoms=[]
-    for atind in lig_pol_atoms:
-        if atind not in hbond_data:
-            unsat_lig_atoms.append(atind)
-    ############################################################
-    ############################################################
-    ############################################################
-    ############################################################
-    ############################################################
-    #mutate first shell residues not already hbonding with lig to polar, minimize,
-    #see if theres hbond now
-    solncount=0
-    if len(unsat_lig_atoms)==0:
-        noligunsats.append(pdb)
-    elif len(unsat_lig_atoms)>1:
-        os.system('rm -r '+curr_soln_dirname)
-        continue
-    else:
+#load pose
+lig=[prm1]
+p=Pose()
+generate_nonstandard_residue_set(p,lig)
+pose_from_file(p, pdb)
+p.update_residue_neighbors()
+#identify first shell residues
+ligand_residue_selector = pyrosetta.rosetta.core.select.residue_selector.ChainSelector('X')
+neighborhood_selector = pyrosetta.rosetta.core.select.residue_selector.NeighborhoodResidueSelector(ligand_residue_selector, 10., False)
+neighborhood_selector_bool = neighborhood_selector.apply(p)
+neighborhood_residues_resnums = pyrosetta.rosetta.core.select.get_residues_from_subset(neighborhood_selector_bool)
+first_shell_res=list(neighborhood_residues_resnums)
+#get the sasa of first shell res to make sure they're facing binding site
+print(first_shell_res)
+for residd in first_shell_res:
+    individual_res_selector=pyrosetta.rosetta.core.select.residue_selector.ResidueIndexSelector()
+    individual_res_selector.set_index(residd)
+    individual_res_selector.apply(p)
+    sasa_metric = pyrosetta.rosetta.core.simple_metrics.metrics.SasaMetric()
+    sasa_metric.set_residue_selector(individual_res_selector)
+    this_res_sasa = sasa_metric.calculate(p)
+    if this_res_sasa>=12.:
+        first_shell_res.remove(residd)
+print(first_shell_res)
+#this is one of those stupid instances wbere i have to filter a list twice
+#for no apparent reason, pisses me off -.-
+for residd in first_shell_res:
+    individual_res_selector=pyrosetta.rosetta.core.select.residue_selector.ResidueIndexSelector()
+    individual_res_selector.set_index(residd)
+    individual_res_selector.apply(p)
+    sasa_metric = pyrosetta.rosetta.core.simple_metrics.metrics.SasaMetric()
+    sasa_metric.set_residue_selector(individual_res_selector)
+    this_res_sasa = sasa_metric.calculate(p)
+    if this_res_sasa>=12.:
+        first_shell_res.remove(residd)
+print(first_shell_res)
+#find whether all ligand polar atoms hbond
+hbond_set = rosetta.core.scoring.hbonds.HBondSet()
+p.update_residue_neighbors()
+rosetta.core.scoring.hbonds.fill_hbond_set(p, False, hbond_set)
+#get atom indices of ligand polar atoms in network pose
+lig_pol_atoms=[]
+for i in range(1,len(p.residue(p.total_residue()).atoms())+1):
+    s=str(p.residue(p.total_residue()).atom_type(i))
+    ligatom=(s.split('\n'))[0].split('Atom Type:')[1].strip()
+    if ligatom=='OOC' or ligatom=='OH' or ligatom=='Nbb' or ligatom=='NLys':
+        lig_pol_atoms.append(i)
+        print(ligatom)
+#identify any ligand polar atoms with no hbonds
+hbond_data=[]
+residues_hb_with_lig=[]
+s=p.sequence()
+if hbond_set.nhbonds()>0:
+    for hbond_index in range(1,hbond_set.nhbonds()+1):
+        drip=hbond_set.hbond(hbond_index).don_res_is_protein()
+        arip=hbond_set.hbond(hbond_index).acc_res_is_protein()
+        if drip==True and arip==True:
+            continue
+        donres_ind=int(hbond_set.hbond(hbond_index).don_res())
+        accres_ind=int(hbond_set.hbond(hbond_index).acc_res())
+        acc_atom_index=int(hbond_set.hbond(hbond_index).acc_atm())
+        donh_atom_index=int(hbond_set.hbond(hbond_index).don_hatm())
+        don_atom_index=int(p.residue(donres_ind).first_adjacent_heavy_atom(donh_atom_index))
+        if drip==True and accres_ind==p.total_residue():
+            hbond_data.append(acc_atom_index)
+            residues_hb_with_lig.append(donres_ind)
+        elif drip==False and donres_ind==p.total_residue():
+            hbond_data.append(don_atom_index)
+            residues_hb_with_lig.append(accres_ind)
+unsat_lig_atoms=[]
+for atind in lig_pol_atoms:
+    if atind not in hbond_data:
+        unsat_lig_atoms.append(atind)
+############################################################
+############################################################
+############################################################
+############################################################
+############################################################
+ulp=0
+ghb=0
+gm=0
+#mutate first shell residues not already hbonding with lig to polar, minimize,
+#see if theres hbond now
+solncount=0
+if len(unsat_lig_atoms)==0:
+    noligunsats.append(pdb)
+else:
+    for xx in range(len(unsat_lig_atoms)):
         good_hbond_mutations=[]
         for resid in first_shell_res:
             if resid not in residues_hb_with_lig:
@@ -194,6 +205,7 @@ for pdb in l[:10]:
                             # test_pose.dump_pdb('temp_solutions/'+temp_pdb_name)
                             good_hbond_mutations.append((new_energy,p.residue(resid).name(),resid,polrestype))
         if len(good_hbond_mutations)>0:
+            ghb+=1
             good_hbond_mutations=sorted(good_hbond_mutations, key=lambda first: first[0])
             best_hbond_mut=good_hbond_mutations[0]
             best_hbond_mut_resid=best_hbond_mut[2]
@@ -212,65 +224,70 @@ for pdb in l[:10]:
             p=test_pose.clone()
             residues_hb_with_lig.append(best_hbond_mut_resid)
         else:
-            os.system('rm -r '+curr_soln_dirname)
-            continue
-    ############################################################
-    ############################################################
-    ############################################################
-    ############################################################
-    ############################################################
-    #identify polar residues in binding site that are not hydrogen
-    #bonding with the ligand
-    useless_buried_polar=[]
-    for resnum in first_shell_res:
-        restype=p.residue(resnum).name()[:3]
-        if restype in polar_residues:
-            if resnum not in residues_hb_with_lig:
-                important_hb=0
-                for resnum2 in residues_hb_with_lig:
-                    try:
-                        w=p.energies().energy_graph().find_energy_edge(resnum,resnum2)
-                        w.fill_energy_map()
-                        hbsc=w[rosetta.core.scoring.hbond_sc]
-                        if hbsc<=-0.5:
-                            important_hb+=1
-                    except:
-                        pass
-                if important_hb>0:
+            if len(residues_hb_with_lig)>=len(lig_pol_atoms):
+                ulp+=1
+                pass
+            else:
+                print('\n\n\nNO GOOD HB MUTS')
+                sys.exit()
+############################################################
+############################################################
+############################################################
+############################################################
+############################################################
+#identify polar residues in binding site that are not hydrogen
+#bonding with the ligand
+useless_buried_polar=[]
+for resnum in first_shell_res:
+    restype=p.residue(resnum).name()[:3]
+    if restype in polar_residues:
+        if resnum not in residues_hb_with_lig:
+            important_hb=0
+            for resnum2 in residues_hb_with_lig:
+                try:
+                    w=p.energies().energy_graph().find_energy_edge(resnum,resnum2)
+                    w.fill_energy_map()
+                    hbsc=w[rosetta.core.scoring.hbond_sc]
+                    if hbsc<=-0.5:
+                        important_hb+=1
+                except:
                     pass
-                else:
-                    useless_buried_polar.append(resnum)
-    #mutate them to aliphatics
-    solncount2=0
-    if len(useless_buried_polar)==0:
-        nouseless_buried_polar.append(pdb)
-    else:
+            if important_hb>0:
+                pass
+            else:
+                useless_buried_polar.append(resnum)
+#mutate them to aliphatics
+solncount2=0
+if len(useless_buried_polar)==0:
+    nouseless_buried_polar.append(pdb)
+else:
+    for resid in useless_buried_polar:
         good_mutations=[]
-        for resid in useless_buried_polar:
-            for nprestype in npres:
-                test_pose=p.clone()
-                start_energy=sf(test_pose)
-                mutate_residue(test_pose,resid,nprestype)
-                mm = MoveMap()
-                mm.set_bb(False)
-                mm.set_chi(False)
-                mm.set_bb(resid,True)
-                mm.set_chi(resid,True) ## For side chain minimization
-                minmover = pyrosetta.rosetta.protocols.minimization_packing.MinMover()
-                minmover.movemap(mm)
-                minmover.score_function(sf)
-                minmover.apply(test_pose)
-                new_energy=sf(test_pose)
-                print('\n\n\n')
-                print(start_energy)
-                print(new_energy)
-                print('\n\n\n')
-                if new_energy<=start_energy+2.:
-                    # temp_pdb_name=pdb.split('.')[0]+'_hbonds_fixed_'+str(solncount)+'_'+str(solncount2)+'.pdb'
-                    solncount2+=1
-                    # test_pose.dump_pdb('temp_solutions/'+temp_pdb_name)
-                    good_mutations.append((new_energy,p.residue(resid).name(),resid,nprestype))
+        for nprestype in npres:
+            test_pose=p.clone()
+            start_energy=sf(test_pose)
+            mutate_residue(test_pose,resid,nprestype)
+            mm = MoveMap()
+            mm.set_bb(False)
+            mm.set_chi(False)
+            mm.set_bb(resid,True)
+            mm.set_chi(resid,True) ## For side chain minimization
+            minmover = pyrosetta.rosetta.protocols.minimization_packing.MinMover()
+            minmover.movemap(mm)
+            minmover.score_function(sf)
+            minmover.apply(test_pose)
+            new_energy=sf(test_pose)
+            print('\n\n\n')
+            print(start_energy)
+            print(new_energy)
+            print('\n\n\n')
+            if new_energy<=start_energy+2.:
+                # temp_pdb_name=pdb.split('.')[0]+'_hbonds_fixed_'+str(solncount)+'_'+str(solncount2)+'.pdb'
+                solncount2+=1
+                # test_pose.dump_pdb('temp_solutions/'+temp_pdb_name)
+                good_mutations.append((new_energy,p.residue(resid).name(),resid,nprestype))
         if len(good_mutations)>0:
+            gm+=1
             good_mutations=sorted(good_mutations, key=lambda first: first[0])
             best_mut=good_mutations[0]
             best_mut_resid=best_mut[2]
@@ -288,24 +305,31 @@ for pdb in l[:10]:
             minmover.apply(test_pose)
             p=test_pose.clone()
         else:
-            os.system('rm -r '+curr_soln_dirname)
-            continue
-    if len(unsat_lig_atoms)==0 and len(useless_buried_polar)==0:
-        os.system('cp '+pdb+' '+curr_soln_dirname+'/og.pdb')
-        of=open(curr_soln_dirname+'/noproblems.txt','w')
-        of.close()
-    elif len(unsat_lig_atoms)>0 and len(useless_buried_polar)==0:
-        os.system('cp '+pdb+' '+curr_soln_dirname+'/og.pdb')
-        soln_pdb_name=pdb.split('.')[0]+'_refined.pdb'
-        p.dump_pdb(curr_soln_dirname+'/'+soln_pdb_name)
-    elif len(unsat_lig_atoms)==0 and len(useless_buried_polar)>0:
-        os.system('cp '+pdb+' '+curr_soln_dirname+'/og.pdb')
-        soln_pdb_name=pdb.split('.')[0]+'_refined.pdb'
-        p.dump_pdb(curr_soln_dirname+'/'+soln_pdb_name)
-    elif len(unsat_lig_atoms)>0 and len(useless_buried_polar)>0:
-        os.system('cp '+pdb+' '+curr_soln_dirname+'/og.pdb')
-        soln_pdb_name=pdb.split('.')[0]+'_refined.pdb'
-        p.dump_pdb(curr_soln_dirname+'/'+soln_pdb_name)
+            pass
+if ulp>0:
+    print('\n\n\nUNSAT LIG POL BUT HAS MULTI HB WITH ANOTHER\n\n\n')
+if ghb>0:
+    print('\n\n\nHB MUT\n\n\n')
+if gm>0:
+    print('\n\n\nEP MUT\n\n\n')
+if len(unsat_lig_atoms)==0 and len(useless_buried_polar)==0:
+    os.system('cp '+pdb+' '+curr_soln_dirname+'/'+pdb.split('.')[0]+'_unrefined.pdb')
+    print('\n\n\nNO PROBLEMS\n\n\n')
+elif len(unsat_lig_atoms)>0 and len(useless_buried_polar)==0:
+    # os.system('cp '+pdb+' '+curr_soln_dirname+'/'+pdb.split('.')[0]+'_og.pdb')
+    soln_pdb_name=pdb.split('.')[0]+'_refined.pdb'
+    p.dump_pdb(curr_soln_dirname+'/'+soln_pdb_name)
+    print('UNSAT ONLY')
+elif len(unsat_lig_atoms)==0 and len(useless_buried_polar)>0:
+    # os.system('cp '+pdb+' '+curr_soln_dirname+'/'+pdb.split('.')[0]+'_og.pdb')
+    soln_pdb_name=pdb.split('.')[0]+'_refined.pdb'
+    p.dump_pdb(curr_soln_dirname+'/'+soln_pdb_name)
+    print('EXTRANEOUS POLAR ONLY')
+elif len(unsat_lig_atoms)>0 and len(useless_buried_polar)>0:
+    # os.system('cp '+pdb+' '+curr_soln_dirname+'/'+pdb.split('.')[0]+'_og.pdb')
+    soln_pdb_name=pdb.split('.')[0]+'_refined.pdb'
+    p.dump_pdb(curr_soln_dirname+'/'+soln_pdb_name)
+    print('BOTH')
 
 
 

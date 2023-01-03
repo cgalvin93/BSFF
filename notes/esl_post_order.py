@@ -2044,14 +2044,10 @@ for i in good:
 
 '''
 RUNNING MPNN ON MATCHES TO GENERATE SEQUENCE PROFILE
-
+design at all positions not in binding site first shell
 
 EXAMPLE OF FIXED POSITIONS DICT
 {"3HTN": {"A": [1, 2, 3, 4, 5, 6, 7, 8, 23, 25], "C": [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 40], "B": []}, "4YOW": {"A": [1, 2, 3, 4, 5, 6, 7, 8, 23, 25], "C": [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 40], "B": [], "D": [], "E": [], "F": []}}
-
-in this case i already applied dsasa filter and found buried matches
-so i just need to identify the designable residues
-
 
 /wynton/home/kortemme/cgalvin/esl4rm_1_bestmatches/enzdes/filtered/analysis/run/filtered2
 '''
@@ -2212,10 +2208,9 @@ for pdb in pdbs:
             first_shell_res.remove(residd)
     print(first_shell_res)
     ###############
-    for resnum in range(1,p.total_residue()):
-        if resnum not in first_shell_res:
-            if resnum not in tofreeze:
-                tofreeze.append(resnum)
+    for resnum in first_shell_res:
+        if resnum not in tofreeze:
+            tofreeze.append(resnum)
     tfdata[pdb]=tofreeze
 
 print(len(list(tfdata.keys())))
@@ -2255,23 +2250,29 @@ qsub -cwd maked.sh
 
 
 
+cd /wynton/home/kortemme/cgalvin/esl4rm_1_bestmatches/enzdes/filtered/analysis/run/filtered2
+
+
+mv mpnn_params.json mpnn
 cd mpnn
 '''
 
 #making the folders with the pdbs
 #in this case i have to do 1 per job cus each file will
 #have different fixed positions
-# import json
+import json
+import os
+########
+ofjsonname='mpnn_params.json'
 #########
-# ofjsonname='/wynton/home/kortemme/cgalvin/r6matching/done/a8s_3p1np/design/a8sr6fd1/filtered/mpnn_params.json'
-# ofjsonname=''
-# #########
-# with open(ofjsonname,'r') as f:
-#     tfdata=json.load(f)
+with open(ofjsonname,'r') as f:
+    tfdata=json.load(f)
 #########
 n_strc_per_job=1
-all_strc_dir='/wynton/home/kortemme/cgalvin/dog/hb4/filtered/genpot/clean/mpnn'
+all_strc_dir='/wynton/home/kortemme/cgalvin/esl4rm_1_bestmatches/enzdes/filtered/analysis/run/filtered2/mpnn'
 directory_prefix='mpnndesign'
+shf_prefix='mpnn_'
+
 ###############
 l=[i for i in os.listdir(all_strc_dir) if i[-3:]=='pdb']
 nstrc=len(l)
@@ -2300,19 +2301,6 @@ for x in range(0,nstrc,n_strc_per_job):
 '''
 {"3HTN": {"A": [1, 2, 3, 4, 5, 6, 7, 8, 23, 25], "C": [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 40], "B": []}, "4YOW": {"A": [1, 2, 3, 4, 5, 6, 7, 8, 23, 25], "C": [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 40], "B": [], "D": [], "E": [], "F": []}}
 '''
-import json
-import os
-#########
-#########
-ofjsonname='/wynton/home/kortemme/cgalvin/dog/hb4/filtered/genpot/clean/mpnn_params.json'
-with open(ofjsonname,'r') as f:
-    tfdata=json.load(f)
-#########
-n_strc_per_job=1
-all_strc_dir='/wynton/home/kortemme/cgalvin/dog/hb4/filtered/genpot/clean/mpnn'
-directory_prefix='mpnndesign'
-shf_prefix='mpnn_'
-###############
 input_directories=[os.path.join(all_strc_dir,i) for i in os.listdir(all_strc_dir) if os.path.isdir(i)==True and i[:len(directory_prefix)]==directory_prefix]
 #
 submitlist=[]
@@ -2385,7 +2373,7 @@ import os
 shf_prefix='mpnn_'
 jobss=[i for i in os.listdir() if shf_prefix in i and i[-2:]=='sh']
 #
-jobss.remove('mpnn__1_.sh')
+# jobss.remove('mpnn__1_.sh')
 #
 for j in jobss:
     cmd='qsub -cwd -l mem_free=10G -o mpnncout -e mpnncout '+j
@@ -2406,12 +2394,13 @@ for j in jobss:
 
 
 consolidating mpnn results
+/wynton/home/kortemme/cgalvin/esl4rm_1_bestmatches/enzdes/filtered/analysis/run/filtered2/mpnn
 '''
 
 
 import os
 #
-all_strc_dir='/wynton/home/kortemme/cgalvin/dog/hb4/filtered/genpot/clean/mpnn'
+all_strc_dir='/wynton/home/kortemme/cgalvin/esl4rm_1_bestmatches/enzdes/filtered/analysis/run/filtered2/mpnn'
 directory_prefix='mpnndesign'
 #
 input_directories=[os.path.join(all_strc_dir,i) for i in os.listdir(all_strc_dir) if os.path.isdir(os.path.join(all_strc_dir,i))==True and i[:len(directory_prefix)]==directory_prefix]
@@ -2427,7 +2416,11 @@ for id in input_directories:
         print(resultfspath)
 '''
 print(len(allresl))
-1939
+447
+
+
+
+
 analyze the mpnn results
 '''
 #
@@ -2463,10 +2456,14 @@ import json
 init('-gen_potential -load_PDB_components False')
 
 #########################
-ofjsonname='/wynton/home/kortemme/cgalvin/dog/hb4/filtered/genpot/clean/mpnn_params.json'
-pdbsdir='/wynton/home/kortemme/cgalvin/dog/hb4/filtered/genpot/clean'
-allparams=[os.path.join(pdbsdir,i) for i in os.listdir(pdbsdir) if i[-6:]=='params']
+ofjsonname='mpnn_params.json'
+#called pdbsdir, using to get inputs for stability redesign (strc and params)
+paramsdir='/wynton/home/kortemme/cgalvin/esl4rm_1_bestmatches/enzdes/filtered/analysis/run'
+#
+allparams=[os.path.join(paramsdir,i) for i in os.listdir(paramsdir) if i[-6:]=='params']
 prm1=allparams[0]
+pdbsdir='/wynton/home/kortemme/cgalvin/esl4rm_1_bestmatches/enzdes/filtered/analysis/run/filtered2'
+
 #########################
 
 with open(ofjsonname,'r') as f:
@@ -2498,22 +2495,22 @@ for strc in list(add.keys()):
                 positional_seq_list.append(seq[des_ind-1])
         strc_seqs[des_ind]=positional_seq_list
     seqs_data[strc]=strc_seqs
-    #
-    p.update_residue_neighbors()
-    ligand_residue_selector = pyrosetta.rosetta.core.select.residue_selector.ChainSelector('X')
-    neighborhood_selector = pyrosetta.rosetta.core.select.residue_selector.NeighborhoodResidueSelector(ligand_residue_selector, 10., False)
-    neighborhood_selector_bool = neighborhood_selector.apply(p)
-    neighborhood_residues_resnums = pyrosetta.rosetta.core.select.get_residues_from_subset(neighborhood_selector_bool)
-    first_shell_res=list(neighborhood_residues_resnums)
-    #
-    second_shell=pyrosetta.rosetta.core.select.residue_selector.NeighborhoodResidueSelector(neighborhood_selector,10.,False)
-    ss_bool = second_shell.apply(p)
-    ss_resnums=pyrosetta.rosetta.core.select.get_residues_from_subset(ss_bool)
-    ss_res=list(ss_resnums)
-    #
-    for i in des_res:-;
-        if i in ss_res:
-            ss_res.remove(i)
+    ############was removing second shell res from redesign but idk why
+    # p.update_residue_neighbors()
+    # ligand_residue_selector = pyrosetta.rosetta.core.select.residue_selector.ChainSelector('X')
+    # neighborhood_selector = pyrosetta.rosetta.core.select.residue_selector.NeighborhoodResidueSelector(ligand_residue_selector, 10., False)
+    # neighborhood_selector_bool = neighborhood_selector.apply(p)
+    # neighborhood_residues_resnums = pyrosetta.rosetta.core.select.get_residues_from_subset(neighborhood_selector_bool)
+    # first_shell_res=list(neighborhood_residues_resnums)
+    # #
+    # second_shell=pyrosetta.rosetta.core.select.residue_selector.NeighborhoodResidueSelector(neighborhood_selector,10.,False)
+    # ss_bool = second_shell.apply(p)
+    # ss_resnums=pyrosetta.rosetta.core.select.get_residues_from_subset(ss_bool)
+    # ss_res=list(ss_resnums)
+    # #
+    # for i in des_res:
+    #     if i in ss_res:
+    #         ss_res.remove(i)
     #
     ofilename=os.path.join('resfiles',strc+'.resfile')
     ofile=open(ofilename,'w')
@@ -2526,33 +2523,20 @@ for strc in list(add.keys()):
             allowableres=list(set(seqs_data[strc][i]))
             s=str(p.pdb_info().pose2pdb(i))+'PIKAA '+('').join(allowableres)
             ofile.write(s+'\n')
-        elif i in ss_res:
-            s=str(p.pdb_info().pose2pdb(i))+'NATAA'
-            ofile.write(s+'\n')
-        elif i==p.total_residue():
-            s=str(p.pdb_info().pose2pdb(i))+'NATAA'
-            ofile.write(s+'\n')
+        # elif i in ss_res:
+        #     s=str(p.pdb_info().pose2pdb(i))+'NATAA'
+        #     ofile.write(s+'\n')
+        # elif i==p.total_residue():
+        #     s=str(p.pdb_info().pose2pdb(i))+'NATAA'
+        #     ofile.write(s+'\n')
         else:
-            s=str(p.pdb_info().pose2pdb(i))+'NATRO'
+            s=str(p.pdb_info().pose2pdb(i))+'NATAA'
             ofile.write(s+'\n')
     ofile.close()
 
 '''
-ALRIGHT NOW I THINK IVE GOT THIS WHOLE WORKFLOW IN ORDER AND WORKING
-but first thought is that there arent very many residues allowed at design positions,
-perhaps i shoyld try to increase the temperature for mpnn to get some more diversity?
-i will hold this thought in my head, but for now i will indeed go for it with
-what i have and see what happens
-
-AAHHHHH IM AN IDIOT THOUGH,
-I ACTUALLY DONT WANNA DO THIS NO,
-I WANNA DO THIS AFTER DESIGNING FOR GOOD LIGAND INTERACTIONS FIRST
-AND THEN FREEZE THOSE INTERACTING RESIDUES ALSO TO TRY TO STABILIZE THE DESIGN
-    --->look at scores/af2 conf of fd designs
-            redesign for stability with mpnn assist
-                    look at scores/af2 conf of resultant des, compare with og fd designs
-IN THE MEANTIME SET THE 3BOP FD TO RUN
-
+FUCKED UP AND FORGOT THAT I DID THIS THE RIGHT WAY BELOW
+BUT WHATEVER I THINK I ALSO CHANGED THE ABOVE CODE TO DO IT RIGHT ALSO
 
 '''
 
@@ -2590,443 +2574,481 @@ IN THE MEANTIME SET THE 3BOP FD TO RUN
 
 
 
-
-'''
-RUNNING MPNN ON af2filt designs TO GENERATE SEQUENCE PROFILE
-
-freezing residues that hbond w/ lig, or other residues that those res hb with
-(bb-bb not included),
-as well as res that have <= -2.0 REU pairwise interaxn w lig
-'''
-################
-################
-################
-################
-################
-import os
-from pyrosetta import*
-import json
-init('-load_PDB_components False')
-##########
-paramsdir='/wynton/home/kortemme/cgalvin/esl/hb3_occ/2np/genpot/clean/enzdes/filtered/analysis/run'
-allparams=[i for i in os.listdir(paramsdir) if i[-6:]=='params']
-prm1=os.path.join(paramsdir,allparams[0])
-ofjsonname='mpnn_params.json'
-sf = ScoreFunction()
-from pyrosetta.rosetta.core.scoring import fa_atr, fa_rep, fa_sol,hbond_sc, fa_elec, hbond_bb_sc#,lk_ball_iso
-sf.set_weight(fa_atr, 1)
-sf.set_weight(fa_rep, .55)
-sf.set_weight(hbond_sc, 1)
-sf.set_weight(fa_elec, 1)
-sf.set_weight(hbond_bb_sc,1)
-pdbs=[i for i in os.listdir() if i[-3:]=='pdb']
-tfdata={}
-for pdb in pdbs:
-    lig=[prm1]
-    p=Pose()
-    generate_nonstandard_residue_set(p,lig)
-    pose_from_file(p, pdb)
-    p.update_residue_neighbors()
-    tofreeze=[]
-    ####################
-    ligand_residue_selector = pyrosetta.rosetta.core.select.residue_selector.ChainSelector('X')
-    neighborhood_selector = pyrosetta.rosetta.core.select.residue_selector.NeighborhoodResidueSelector(ligand_residue_selector, 10., False)
-    neighborhood_selector_bool = neighborhood_selector.apply(p)
-    neighborhood_residues_resnums = pyrosetta.rosetta.core.select.get_residues_from_subset(neighborhood_selector_bool)
-    first_shell_res=list(neighborhood_residues_resnums)
-    ligand_pose=p.residue(p.total_residue()).clone()
-    ###############
-    for fsr in first_shell_res:
-        network_pose=Pose()
-        network_pose.append_residue_by_jump(ligand_pose, 1)
-        res_pose1=p.residue(fsr).clone()
-        network_pose.append_residue_by_jump(res_pose1, 1)
-        pairwise_score=sf(network_pose)
-        # print(pairwise_score)
-        if pairwise_score<=-2.0:
-            tofreeze.append(fsr)
-    ############
-    hbond_set = rosetta.core.scoring.hbonds.HBondSet()
-    network_pose.update_residue_neighbors()
-    rosetta.core.scoring.hbonds.fill_hbond_set(p, False, hbond_set,exclude_bb=True)
-    s=p.sequence()
-    hbond_data={}
-    if hbond_set.nhbonds()>0:
-        for hbond_index in range(1,hbond_set.nhbonds()+1):
-            donres_ind=int(hbond_set.hbond(hbond_index).don_res())
-            accres_ind=int(hbond_set.hbond(hbond_index).acc_res())
-            donres=s[donres_ind-1]
-            accres=s[accres_ind-1]
-            acc_atom_index=int(hbond_set.hbond(hbond_index).acc_atm())
-            donh_atom_index=int(hbond_set.hbond(hbond_index).don_hatm())
-            don_atom_index=int(p.residue(donres_ind).first_adjacent_heavy_atom(donh_atom_index))
-            acc_atom_data=str(p.residue(accres_ind).atom_type(acc_atom_index))
-            acc_atom=(acc_atom_data.split('\n'))[0].split('Atom Type:')[1].strip()
-            don_atom_data=str(p.residue(donres_ind).atom_type(don_atom_index))
-            don_atom=(don_atom_data.split('\n'))[0].split('Atom Type:')[1].strip()
-            acc_atom_name=str(p.residue(accres_ind).atom_name(acc_atom_index)).strip(' ')
-            don_atom_name=str(p.residue(donres_ind).atom_name(don_atom_index)).strip(' ')
-            hbond_data[hbond_index]=[donres_ind,accres_ind,donres,accres,don_atom,acc_atom,don_atom_name,acc_atom_name]
-    #identify the network of hbonds about the ligand
-    network_members=[]
-    hb_w_lig=[]
-    ptn_lig_hb=[]
-    for keyb in hbond_data.keys():
-        l=hbond_data[keyb]
-        if l[0]==p.total_residue():
-            hb_w_lig.append(l[1])
-            network_members.append((l[0],l[1],l[-2],l[-1]))
-            ptn_lig_hb.append((l[-2],l[-3],'ligdon'))
-        if l[1]==p.total_residue():
-            hb_w_lig.append(l[0])
-            network_members.append((l[0],l[1],l[-2],l[-1]))
-            ptn_lig_hb.append((l[-1],l[-4],'ligacc'))
-    hbws=[]
-    for i in hb_w_lig:
-        for keyc in hbond_data.keys():
-            l=hbond_data[keyc]
-            if l[0]==i:
-                if l[1]!=p.total_residue():
-                    hbws.append(l[1])
-                    network_members.append((l[0],l[1],l[-2],l[-1]))
-            if l[1]==i:
-                if l[0]!=p.total_residue():
-                    hbws.append(l[0])
-                    network_members.append((l[0],l[1],l[-2],l[-1]))
-    for rn in hb_w_lig:
-        if rn not in tofreeze:
-            tofreeze.append(rn)
-    for rn in hbws:
-        if rn not in tofreeze:
-            tofreeze.append(rn)
-    tfdata[pdb]=tofreeze
-
-
-print(len(list(tfdata.keys())))
-json.dump(tfdata,open(ofjsonname,'w'))
-print('json output')
-
-
-
-
-
-
-'''
-MPNN WITH CONSTRAINTS
-'''
-
-#copy pdbs to new directory
-#excluding the ligand
-os.makedirs('mpnn',exist_ok=True)
-l=[i for i in tfdata.keys()]
-for i in l:
-    f=open(i,'r')
-    lines=[line for line in f.readlines() if line[:4]=='ATOM']
-    f.close()
-    newp=os.path.join('mpnn',i)
-    of=open(newp,'w')
-    for line in lines:
-        of.write(line)
-    of.close()
-
-os.chdir('mpnn')
-#making the folders with the pdbs
-#in this case i have to do 1 per job cus each file will
-#have different fixed positions
+#
+# '''
+# RUNNING MPNN ON af2filt designs TO GENERATE SEQUENCE PROFILE
+#
+# freezing residues that hbond w/ lig, or other residues that those res hb with
+# (bb-bb not included),
+# as well as res that have <= -2.0 REU pairwise interaxn w lig
+# '''
+# ################
+# ################
+# ################
+# ################
+# ################
+# import os
+# from pyrosetta import*
 # import json
-#########
-# ofjsonname='/wynton/home/kortemme/cgalvin/r6matching/done/a8s_3p1np/design/a8sr6fd1/filtered/mpnn_params.json'
-# ofjsonname=''
+# init('-load_PDB_components False')
+# ##########
+# paramsdir='/wynton/home/kortemme/cgalvin/esl/hb3_occ/2np/genpot/clean/enzdes/filtered/analysis/run'
+# allparams=[i for i in os.listdir(paramsdir) if i[-6:]=='params']
+# prm1=os.path.join(paramsdir,allparams[0])
+# ofjsonname='mpnn_params.json'
+# sf = ScoreFunction()
+# from pyrosetta.rosetta.core.scoring import fa_atr, fa_rep, fa_sol,hbond_sc, fa_elec, hbond_bb_sc#,lk_ball_iso
+# sf.set_weight(fa_atr, 1)
+# sf.set_weight(fa_rep, .55)
+# sf.set_weight(hbond_sc, 1)
+# sf.set_weight(fa_elec, 1)
+# sf.set_weight(hbond_bb_sc,1)
+# pdbs=[i for i in os.listdir() if i[-3:]=='pdb']
+# tfdata={}
+# for pdb in pdbs:
+#     lig=[prm1]
+#     p=Pose()
+#     generate_nonstandard_residue_set(p,lig)
+#     pose_from_file(p, pdb)
+#     p.update_residue_neighbors()
+#     tofreeze=[]
+#     ####################
+#     ligand_residue_selector = pyrosetta.rosetta.core.select.residue_selector.ChainSelector('X')
+#     neighborhood_selector = pyrosetta.rosetta.core.select.residue_selector.NeighborhoodResidueSelector(ligand_residue_selector, 10., False)
+#     neighborhood_selector_bool = neighborhood_selector.apply(p)
+#     neighborhood_residues_resnums = pyrosetta.rosetta.core.select.get_residues_from_subset(neighborhood_selector_bool)
+#     first_shell_res=list(neighborhood_residues_resnums)
+#     ligand_pose=p.residue(p.total_residue()).clone()
+#     ###############
+#     for fsr in first_shell_res:
+#         network_pose=Pose()
+#         network_pose.append_residue_by_jump(ligand_pose, 1)
+#         res_pose1=p.residue(fsr).clone()
+#         network_pose.append_residue_by_jump(res_pose1, 1)
+#         pairwise_score=sf(network_pose)
+#         # print(pairwise_score)
+#         if pairwise_score<=-2.0:
+#             tofreeze.append(fsr)
+#     ############
+#     hbond_set = rosetta.core.scoring.hbonds.HBondSet()
+#     network_pose.update_residue_neighbors()
+#     rosetta.core.scoring.hbonds.fill_hbond_set(p, False, hbond_set,exclude_bb=True)
+#     s=p.sequence()
+#     hbond_data={}
+#     if hbond_set.nhbonds()>0:
+#         for hbond_index in range(1,hbond_set.nhbonds()+1):
+#             donres_ind=int(hbond_set.hbond(hbond_index).don_res())
+#             accres_ind=int(hbond_set.hbond(hbond_index).acc_res())
+#             donres=s[donres_ind-1]
+#             accres=s[accres_ind-1]
+#             acc_atom_index=int(hbond_set.hbond(hbond_index).acc_atm())
+#             donh_atom_index=int(hbond_set.hbond(hbond_index).don_hatm())
+#             don_atom_index=int(p.residue(donres_ind).first_adjacent_heavy_atom(donh_atom_index))
+#             acc_atom_data=str(p.residue(accres_ind).atom_type(acc_atom_index))
+#             acc_atom=(acc_atom_data.split('\n'))[0].split('Atom Type:')[1].strip()
+#             don_atom_data=str(p.residue(donres_ind).atom_type(don_atom_index))
+#             don_atom=(don_atom_data.split('\n'))[0].split('Atom Type:')[1].strip()
+#             acc_atom_name=str(p.residue(accres_ind).atom_name(acc_atom_index)).strip(' ')
+#             don_atom_name=str(p.residue(donres_ind).atom_name(don_atom_index)).strip(' ')
+#             hbond_data[hbond_index]=[donres_ind,accres_ind,donres,accres,don_atom,acc_atom,don_atom_name,acc_atom_name]
+#     #identify the network of hbonds about the ligand
+#     network_members=[]
+#     hb_w_lig=[]
+#     ptn_lig_hb=[]
+#     for keyb in hbond_data.keys():
+#         l=hbond_data[keyb]
+#         if l[0]==p.total_residue():
+#             hb_w_lig.append(l[1])
+#             network_members.append((l[0],l[1],l[-2],l[-1]))
+#             ptn_lig_hb.append((l[-2],l[-3],'ligdon'))
+#         if l[1]==p.total_residue():
+#             hb_w_lig.append(l[0])
+#             network_members.append((l[0],l[1],l[-2],l[-1]))
+#             ptn_lig_hb.append((l[-1],l[-4],'ligacc'))
+#     hbws=[]
+#     for i in hb_w_lig:
+#         for keyc in hbond_data.keys():
+#             l=hbond_data[keyc]
+#             if l[0]==i:
+#                 if l[1]!=p.total_residue():
+#                     hbws.append(l[1])
+#                     network_members.append((l[0],l[1],l[-2],l[-1]))
+#             if l[1]==i:
+#                 if l[0]!=p.total_residue():
+#                     hbws.append(l[0])
+#                     network_members.append((l[0],l[1],l[-2],l[-1]))
+#     for rn in hb_w_lig:
+#         if rn not in tofreeze:
+#             tofreeze.append(rn)
+#     for rn in hbws:
+#         if rn not in tofreeze:
+#             tofreeze.append(rn)
+#     tfdata[pdb]=tofreeze
+#
+#
+# print(len(list(tfdata.keys())))
+# json.dump(tfdata,open(ofjsonname,'w'))
+# print('json output')
+#
+#
+#
+#
+#
+#
+# '''
+# MPNN WITH CONSTRAINTS
+# '''
+#
+# #copy pdbs to new directory
+# #excluding the ligand
+# os.makedirs('mpnn',exist_ok=True)
+# l=[i for i in tfdata.keys()]
+# for i in l:
+#     f=open(i,'r')
+#     lines=[line for line in f.readlines() if line[:4]=='ATOM']
+#     f.close()
+#     newp=os.path.join('mpnn',i)
+#     of=open(newp,'w')
+#     for line in lines:
+#         of.write(line)
+#     of.close()
+#
+# os.chdir('mpnn')
+# #making the folders with the pdbs
+# #in this case i have to do 1 per job cus each file will
+# #have different fixed positions
+# # import json
 # #########
+# # ofjsonname='/wynton/home/kortemme/cgalvin/r6matching/done/a8s_3p1np/design/a8sr6fd1/filtered/mpnn_params.json'
+# # ofjsonname=''
+# # #########
+# # with open(ofjsonname,'r') as f:
+# #     tfdata=json.load(f)
+# #########
+# n_strc_per_job=1
+# all_strc_dir='/wynton/home/kortemme/cgalvin/esl/hb3_occ/2np/genpot/clean/enzdes/filtered/analysis/run/filtered2/mpnn'
+# directory_prefix='mpnndesign'
+# ###############
+# l=[i for i in os.listdir(all_strc_dir) if i[-3:]=='pdb']
+# nstrc=len(l)
+# c=1
+# for x in range(0,nstrc,n_strc_per_job):
+#     if x+n_strc_per_job<nstrc:
+#         strcset=l[x:x+n_strc_per_job]
+#         currdirname=os.path.join(all_strc_dir,('_').join([directory_prefix,str(c)]))
+#         os.makedirs(currdirname,exist_ok=True)
+#         for y in strcset:
+#             os.system('mv '+y+' '+currdirname+'/'+y.split('/')[-1])
+#         c+=1
+#     else:
+#         strcset=l[x:nstrc]
+#         currdirname=os.path.join(all_strc_dir,('_').join([directory_prefix,str(c)]))
+#         os.makedirs(currdirname,exist_ok=True)
+#         for y in strcset:
+#             os.system('mv '+y+' '+currdirname+'/'+y.split('/')[-1])
+#         c+=1
+#
+#
+# #making the fixed position dictionaries and putting them in the
+# #proper directories
+# #making the shellfile scripts
+# '''
+# {"3HTN": {"A": [1, 2, 3, 4, 5, 6, 7, 8, 23, 25], "C": [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 40], "B": []}, "4YOW": {"A": [1, 2, 3, 4, 5, 6, 7, 8, 23, 25], "C": [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 40], "B": [], "D": [], "E": [], "F": []}}
+# '''
+# import json
+# import os
+# #########
+# #########
+# ofjsonname='/wynton/home/kortemme/cgalvin/esl/hb3_occ/2np/genpot/clean/enzdes/filtered/analysis/run/filtered2/mpnn_params.json'
 # with open(ofjsonname,'r') as f:
 #     tfdata=json.load(f)
-#########
-n_strc_per_job=1
-all_strc_dir='/wynton/home/kortemme/cgalvin/esl/hb3_occ/2np/genpot/clean/enzdes/filtered/analysis/run/filtered2/mpnn'
-directory_prefix='mpnndesign'
-###############
-l=[i for i in os.listdir(all_strc_dir) if i[-3:]=='pdb']
-nstrc=len(l)
-c=1
-for x in range(0,nstrc,n_strc_per_job):
-    if x+n_strc_per_job<nstrc:
-        strcset=l[x:x+n_strc_per_job]
-        currdirname=os.path.join(all_strc_dir,('_').join([directory_prefix,str(c)]))
-        os.makedirs(currdirname,exist_ok=True)
-        for y in strcset:
-            os.system('mv '+y+' '+currdirname+'/'+y.split('/')[-1])
-        c+=1
-    else:
-        strcset=l[x:nstrc]
-        currdirname=os.path.join(all_strc_dir,('_').join([directory_prefix,str(c)]))
-        os.makedirs(currdirname,exist_ok=True)
-        for y in strcset:
-            os.system('mv '+y+' '+currdirname+'/'+y.split('/')[-1])
-        c+=1
+# #########
+# n_strc_per_job=1
+# all_strc_dir='/wynton/home/kortemme/cgalvin/esl/hb3_occ/2np/genpot/clean/enzdes/filtered/analysis/run/filtered2/mpnn'
+# directory_prefix='mpnndesign'
+# shf_prefix='mpnn_'
+# ###############
+# input_directories=[os.path.join(all_strc_dir,i) for i in os.listdir(all_strc_dir) if os.path.isdir(i)==True and i[:len(directory_prefix)]==directory_prefix]
+# #
+# submitlist=[]
+# for id in input_directories:
+#     pdbid=[i for i in os.listdir(id) if i[-3:]=='pdb']
+#     pdbidd=pdbid[0].strip('.pdb')
+#     outputdirname=id.split('/')[-1]+'_output'
+#     os.makedirs(os.path.join(id,outputdirname),exist_ok=True)
+#     p=[i for i in os.listdir(id) if i[-3:]=='pdb']
+#     pid=p[0]
+#     # tf=[str(i[0]) for i in tfdata[pid]]
+#     uol=[i for i in tfdata[pid]]
+#     ol=sorted(uol)
+#     odict={}
+#     sd={}
+#     sd["A"]=ol
+#     odict[pdbidd]=sd
+#     with open(os.path.join(id,outputdirname,'fixed_pdbs.jsonl'),'w') as of:
+#         json.dump(odict,of)
+#     submitlist.append((id,os.path.join(id,outputdirname)))
+# #
+# print(len(submitlist))
+# c=1
+# for id,od in submitlist:
+#     ofn=os.path.join(all_strc_dir,'_'.join([shf_prefix,str(c),'.sh']))
+#     of=open(ofn,'w')
+#     of.write('#!/bin/bash')
+#     of.write('\n')
+#     of.write('source /wynton/home/kortemme/cgalvin/mpnn_test_env/bin/activate')
+#     of.write('\n')
+#     of.write('folder_with_pdbs="'+id+'"')
+#     of.write('\n')
+#     of.write('output_dir="'+od+'"')
+#     of.write('\n')
+#     of.write('if [ ! -d $output_dir ]')
+#     of.write('\n')
+#     of.write('then')
+#     of.write('\n')
+#     of.write('    mkdir -p $output_dir')
+#     of.write('\n')
+#     of.write('fi')
+#     of.write('\n')
+#     of.write('path_for_parsed_chains=$output_dir"/parsed_pdbs.jsonl"')
+#     of.write('\n')
+#     of.write('path_for_fixed_positions=$output_dir"/fixed_pdbs.jsonl"')
+#     of.write('\n')
+#     of.write('python /wynton/home/kortemme/cgalvin/ProteinMPNN-main/vanilla_proteinmpnn/helper_scripts/parse_multiple_chains.py --input_path=$folder_with_pdbs --output_path=$path_for_parsed_chains')
+#     of.write('\n')
+#     cmdl=['python',
+#     '/wynton/home/kortemme/cgalvin/ProteinMPNN-main/vanilla_proteinmpnn/protein_mpnn_run.py',
+#     '--jsonl_path $path_for_parsed_chains',
+#     '--out_folder $output_dir',
+#     '--fixed_positions_jsonl $path_for_fixed_positions',
+#     '--num_seq_per_target 500',
+#     '--sampling_temp "0.2"',
+#     '--batch_size 1']
+#     cmd=' '.join(cmdl)
+#     of.write(cmd)
+#     of.write('\n')
+#     of.write('qstat -j "$JOB_ID"')
+#     of.close()
+#     c+=1
+#
+# '''
+# mkdir mpnncout
+# qsub -cwd -l mem_free=10G -o mpnncout -e mpnncout mpnn__1_.sh
+#
+# '''
+# import os
+# shf_prefix='mpnn_'
+# jobss=[i for i in os.listdir() if shf_prefix in i and i[-2:]=='sh']
+# #
+# for j in jobss:
+#     cmd='qsub -cwd -l mem_free=10G -o mpnncout -e mpnncout '+j
+#     os.system(cmd)
+#
+# '''
+# ~30 minutes per job only
+#
+#
+# /bin/sh: git: command not found
+#
+#
+#
+#
+#
+#
+#
+#
+#
+# consolidating mpnn results
+# '''
+#
+#
+# import os
+# #
+# all_strc_dir='/wynton/home/kortemme/cgalvin/esl/hb3_occ/2np/genpot/clean/enzdes/filtered/analysis/run/filtered2/mpnn'
+# directory_prefix='mpnndesign'
+# #
+# input_directories=[os.path.join(all_strc_dir,i) for i in os.listdir(all_strc_dir) if os.path.isdir(os.path.join(all_strc_dir,i))==True and i[:len(directory_prefix)]==directory_prefix]
+# #
+# allresl=[]
+# for id in input_directories:
+#     resultfspath=os.path.join(id,'_'.join([id.split('/')[-1],'output']),'seqs')
+#     if os.path.exists(resultfspath):
+#         resl=[i for i in os.listdir(resultfspath) if i[-3:]=='.fa']
+#         for y in resl:
+#             allresl.append(os.path.join(resultfspath,y))
+#     else:
+#         print(resultfspath)
+# '''
+# print(len(allresl))
+# 1939
+# analyze the mpnn results
+# '''
+# #
+# add={}
+# og_data=[]
+# #
+# for i in range(len(allresl)):
+#     design_data=[]
+#     f=open(allresl[i],'r')
+#     lines=[line for line in f.readlines()]
+#     f.close()
+#     #
+#     if len(lines)>0:
+#         ogname=lines[0].split(',')[0].strip(' ').strip('>')
+#         ogscore=float(lines[0].split(',')[1].strip(' ').strip('score='))
+#         og_data.append((ogname,ogscore))
+#         scores=[]
+#         for i in range(2,len(lines),2):
+#             score=float(lines[i].split(',')[2].strip(' ').strip('score='))
+#             seqrec=float(lines[i].split(',')[3].strip(' ').strip('seq_recovery='))
+#             seq=lines[i+1].strip('\n')
+#             design_data.append((score,seqrec,seq))
+#             scores.append(score)
+#         design_data=sorted(design_data, key=lambda first: first[0])
+#         add[ogname]=design_data
+#
+# '''
+# add[name]=score,seqrec,seq
+# '''
+# import os
+# from pyrosetta import*
+# import json
+# init('-load_PDB_components False')
+#
+# #########################
+# ofjsonname='/wynton/home/kortemme/cgalvin/esl/hb3_occ/2np/genpot/clean/enzdes/filtered/analysis/run/filtered2/mpnn_params.json'
+# pdbsdir='/wynton/home/kortemme/cgalvin/esl/hb3_occ/2np/genpot/clean/enzdes/filtered/analysis/run/filtered2/'
+# paramsdir='/wynton/home/kortemme/cgalvin/esl/hb3_occ/2np/genpot/clean/enzdes/filtered/analysis/run/'
+# allparams=[os.path.join(paramsdir,i) for i in os.listdir(paramsdir) if i[-6:]=='params']
+# prm1=allparams[0]
+# #########################
+#
+# with open(ofjsonname,'r') as f:
+#     tfdata=json.load(f)
+#
+#
+#
+# amino_acids={'ALA':'A',
+#              'ARG':'R',
+#              'ASN':'N',
+#              'ASP':'D',
+#              'CYS':'C',
+#              'GLU':'E',
+#              'GLN':'Q',
+#              'GLY':'G',
+#              'HIS':'H',
+#              'ILE':'I',
+#              'LEU':'L',
+#              'LYS':'K',
+#              'MET':'M',
+#              'PHE':'F',
+#              'PRO':'P',
+#              'SER':'S',
+#              'THR':'T',
+#              'TRP':'W',
+#              'TYR':'Y',
+#              'VAL':'V'}
+#
+#
+# os.makedirs('resfiles',exist_ok=True)
+# seqs_data={}
+# for strc in list(add.keys()):
+#     pdb=os.path.join(pdbsdir,strc+'.pdb')
+#     lig=[prm1]
+#     p=Pose()
+#     generate_nonstandard_residue_set(p,lig)
+#     pose_from_file(p, pdb)
+#     ###################
+#     frozen_res=tfdata[strc+'.pdb']
+#     des_res=[]
+#     for i in range(1,p.total_residue()):
+#         if i not in frozen_res:
+#             des_res.append(i)
+#     ###############
+#     strc_seqs={}
+#     for des_ind in des_res:
+#         positional_seq_list=[]
+#         for mpnn_data_entry in add[strc]:
+#             score=mpnn_data_entry[0]
+#             if score<=1.0:
+#                 seq=mpnn_data_entry[2]
+#                 positional_seq_list.append(seq[des_ind-1])
+#         strc_seqs[des_ind]=positional_seq_list
+#     seqs_data[strc]=strc_seqs
+#     #
+#     ofilename=os.path.join('resfiles',strc+'.resfile')
+#     ofile=open(ofilename,'w')
+#     #write header
+#     ofile.write('USE_INPUT_SC')
+#     ofile.write('\nstart'+'\n')
+#     #PIKAA
+#     for i in range(1,p.total_residue()+1):
+#         if i in strc_seqs.keys():
+#             allowableres=list(set(seqs_data[strc][i]))
+#             current_res=p.residue(i).name()[:3]
+#             olccr=amino_acids[current_res]
+#             if olccr not in allowableres:
+#                 allowableres.append(olccr)
+#             s=str(p.pdb_info().pose2pdb(i))+'PIKAA '+('').join(allowableres)
+#             ofile.write(s+'\n')
+#         else:
+#             s=str(p.pdb_info().pose2pdb(i))+'NATAA'
+#             ofile.write(s+'\n')
+#     ofile.close()
+# # print(strc_seqs.keys())
+# # for key in strc_seqs.keys():
+# #     print(len(set(strc_seqs[key])))
+# '''
+# THERES A QUESTION HERE IF I WANNA PROCEED WITH THIS ALL SEEN RES ALLOWED SCHEME
+# OR LIMIT TO THOSE SEEN ABOVE A CERTAIN FREQUENCY
+#         idk maybe for now i just roll with it
+# okay next is to get pdbs and params in this same dir as resfiles w
+# proper naming scheme
+# then run multiple cycles of fd 3bop, followed by filters
+#
+# '''
+#
+#
 
 
-#making the fixed position dictionaries and putting them in the
-#proper directories
-#making the shellfile scripts
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 '''
-{"3HTN": {"A": [1, 2, 3, 4, 5, 6, 7, 8, 23, 25], "C": [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 40], "B": []}, "4YOW": {"A": [1, 2, 3, 4, 5, 6, 7, 8, 23, 25], "C": [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 40], "B": [], "D": [], "E": [], "F": []}}
+cd resfiles
+
+copy the relevant pdbs and params to this directory for stability focused design
 '''
-import json
+
 import os
 #########
-#########
-ofjsonname='/wynton/home/kortemme/cgalvin/esl/hb3_occ/2np/genpot/clean/enzdes/filtered/analysis/run/filtered2/mpnn_params.json'
-with open(ofjsonname,'r') as f:
-    tfdata=json.load(f)
-#########
-n_strc_per_job=1
-all_strc_dir='/wynton/home/kortemme/cgalvin/esl/hb3_occ/2np/genpot/clean/enzdes/filtered/analysis/run/filtered2/mpnn'
-directory_prefix='mpnndesign'
-shf_prefix='mpnn_'
-###############
-input_directories=[os.path.join(all_strc_dir,i) for i in os.listdir(all_strc_dir) if os.path.isdir(i)==True and i[:len(directory_prefix)]==directory_prefix]
-#
-submitlist=[]
-for id in input_directories:
-    pdbid=[i for i in os.listdir(id) if i[-3:]=='pdb']
-    pdbidd=pdbid[0].strip('.pdb')
-    outputdirname=id.split('/')[-1]+'_output'
-    os.makedirs(os.path.join(id,outputdirname),exist_ok=True)
-    p=[i for i in os.listdir(id) if i[-3:]=='pdb']
-    pid=p[0]
-    # tf=[str(i[0]) for i in tfdata[pid]]
-    uol=[i for i in tfdata[pid]]
-    ol=sorted(uol)
-    odict={}
-    sd={}
-    sd["A"]=ol
-    odict[pdbidd]=sd
-    with open(os.path.join(id,outputdirname,'fixed_pdbs.jsonl'),'w') as of:
-        json.dump(odict,of)
-    submitlist.append((id,os.path.join(id,outputdirname)))
-#
-print(len(submitlist))
-c=1
-for id,od in submitlist:
-    ofn=os.path.join(all_strc_dir,'_'.join([shf_prefix,str(c),'.sh']))
-    of=open(ofn,'w')
-    of.write('#!/bin/bash')
-    of.write('\n')
-    of.write('source /wynton/home/kortemme/cgalvin/mpnn_test_env/bin/activate')
-    of.write('\n')
-    of.write('folder_with_pdbs="'+id+'"')
-    of.write('\n')
-    of.write('output_dir="'+od+'"')
-    of.write('\n')
-    of.write('if [ ! -d $output_dir ]')
-    of.write('\n')
-    of.write('then')
-    of.write('\n')
-    of.write('    mkdir -p $output_dir')
-    of.write('\n')
-    of.write('fi')
-    of.write('\n')
-    of.write('path_for_parsed_chains=$output_dir"/parsed_pdbs.jsonl"')
-    of.write('\n')
-    of.write('path_for_fixed_positions=$output_dir"/fixed_pdbs.jsonl"')
-    of.write('\n')
-    of.write('python /wynton/home/kortemme/cgalvin/ProteinMPNN-main/vanilla_proteinmpnn/helper_scripts/parse_multiple_chains.py --input_path=$folder_with_pdbs --output_path=$path_for_parsed_chains')
-    of.write('\n')
-    cmdl=['python',
-    '/wynton/home/kortemme/cgalvin/ProteinMPNN-main/vanilla_proteinmpnn/protein_mpnn_run.py',
-    '--jsonl_path $path_for_parsed_chains',
-    '--out_folder $output_dir',
-    '--fixed_positions_jsonl $path_for_fixed_positions',
-    '--num_seq_per_target 500',
-    '--sampling_temp "0.2"',
-    '--batch_size 1']
-    cmd=' '.join(cmdl)
-    of.write(cmd)
-    of.write('\n')
-    of.write('qstat -j "$JOB_ID"')
-    of.close()
-    c+=1
-
-'''
-mkdir mpnncout
-qsub -cwd -l mem_free=10G -o mpnncout -e mpnncout mpnn__1_.sh
-
-'''
-import os
-shf_prefix='mpnn_'
-jobss=[i for i in os.listdir() if shf_prefix in i and i[-2:]=='sh']
-#
-for j in jobss:
-    cmd='qsub -cwd -l mem_free=10G -o mpnncout -e mpnncout '+j
-    os.system(cmd)
-
-'''
-~30 minutes per job only
-
-
-/bin/sh: git: command not found
-
-
-
-
-
-
-
-
-
-consolidating mpnn results
-'''
-
-
-import os
-#
-all_strc_dir='/wynton/home/kortemme/cgalvin/esl/hb3_occ/2np/genpot/clean/enzdes/filtered/analysis/run/filtered2/mpnn'
-directory_prefix='mpnndesign'
-#
-input_directories=[os.path.join(all_strc_dir,i) for i in os.listdir(all_strc_dir) if os.path.isdir(os.path.join(all_strc_dir,i))==True and i[:len(directory_prefix)]==directory_prefix]
-#
-allresl=[]
-for id in input_directories:
-    resultfspath=os.path.join(id,'_'.join([id.split('/')[-1],'output']),'seqs')
-    if os.path.exists(resultfspath):
-        resl=[i for i in os.listdir(resultfspath) if i[-3:]=='.fa']
-        for y in resl:
-            allresl.append(os.path.join(resultfspath,y))
-    else:
-        print(resultfspath)
-'''
-print(len(allresl))
-1939
-analyze the mpnn results
-'''
-#
-add={}
-og_data=[]
-#
-for i in range(len(allresl)):
-    design_data=[]
-    f=open(allresl[i],'r')
-    lines=[line for line in f.readlines()]
-    f.close()
-    #
-    if len(lines)>0:
-        ogname=lines[0].split(',')[0].strip(' ').strip('>')
-        ogscore=float(lines[0].split(',')[1].strip(' ').strip('score='))
-        og_data.append((ogname,ogscore))
-        scores=[]
-        for i in range(2,len(lines),2):
-            score=float(lines[i].split(',')[2].strip(' ').strip('score='))
-            seqrec=float(lines[i].split(',')[3].strip(' ').strip('seq_recovery='))
-            seq=lines[i+1].strip('\n')
-            design_data.append((score,seqrec,seq))
-            scores.append(score)
-        design_data=sorted(design_data, key=lambda first: first[0])
-        add[ogname]=design_data
-
-'''
-add[name]=score,seqrec,seq
-'''
-import os
-from pyrosetta import*
-import json
-init('-load_PDB_components False')
-
-#########################
-ofjsonname='/wynton/home/kortemme/cgalvin/esl/hb3_occ/2np/genpot/clean/enzdes/filtered/analysis/run/filtered2/mpnn_params.json'
-pdbsdir='/wynton/home/kortemme/cgalvin/esl/hb3_occ/2np/genpot/clean/enzdes/filtered/analysis/run/filtered2/'
-paramsdir='/wynton/home/kortemme/cgalvin/esl/hb3_occ/2np/genpot/clean/enzdes/filtered/analysis/run/'
-allparams=[os.path.join(paramsdir,i) for i in os.listdir(paramsdir) if i[-6:]=='params']
-prm1=allparams[0]
-#########################
-
-with open(ofjsonname,'r') as f:
-    tfdata=json.load(f)
-
-
-
-amino_acids={'ALA':'A',
-             'ARG':'R',
-             'ASN':'N',
-             'ASP':'D',
-             'CYS':'C',
-             'GLU':'E',
-             'GLN':'Q',
-             'GLY':'G',
-             'HIS':'H',
-             'ILE':'I',
-             'LEU':'L',
-             'LYS':'K',
-             'MET':'M',
-             'PHE':'F',
-             'PRO':'P',
-             'SER':'S',
-             'THR':'T',
-             'TRP':'W',
-             'TYR':'Y',
-             'VAL':'V'}
-
-
-os.makedirs('resfiles',exist_ok=True)
-seqs_data={}
-for strc in list(add.keys()):
-    pdb=os.path.join(pdbsdir,strc+'.pdb')
-    lig=[prm1]
-    p=Pose()
-    generate_nonstandard_residue_set(p,lig)
-    pose_from_file(p, pdb)
-    ###################
-    frozen_res=tfdata[strc+'.pdb']
-    des_res=[]
-    for i in range(1,p.total_residue()):
-        if i not in frozen_res:
-            des_res.append(i)
-    ###############
-    strc_seqs={}
-    for des_ind in des_res:
-        positional_seq_list=[]
-        for mpnn_data_entry in add[strc]:
-            score=mpnn_data_entry[0]
-            if score<=1.0:
-                seq=mpnn_data_entry[2]
-                positional_seq_list.append(seq[des_ind-1])
-        strc_seqs[des_ind]=positional_seq_list
-    seqs_data[strc]=strc_seqs
-    #
-    ofilename=os.path.join('resfiles',strc+'.resfile')
-    ofile=open(ofilename,'w')
-    #write header
-    ofile.write('USE_INPUT_SC')
-    ofile.write('\nstart'+'\n')
-    #PIKAA
-    for i in range(1,p.total_residue()+1):
-        if i in strc_seqs.keys():
-            allowableres=list(set(seqs_data[strc][i]))
-            current_res=p.residue(i).name()[:3]
-            olccr=amino_acids[current_res]
-            if olccr not in allowableres:
-                allowableres.append(olccr)
-            s=str(p.pdb_info().pose2pdb(i))+'PIKAA '+('').join(allowableres)
-            ofile.write(s+'\n')
-        else:
-            s=str(p.pdb_info().pose2pdb(i))+'NATAA'
-            ofile.write(s+'\n')
-    ofile.close()
-# print(strc_seqs.keys())
-# for key in strc_seqs.keys():
-#     print(len(set(strc_seqs[key])))
-'''
-THERES A QUESTION HERE IF I WANNA PROCEED WITH THIS ALL SEEN RES ALLOWED SCHEME
-OR LIMIT TO THOSE SEEN ABOVE A CERTAIN FREQUENCY
-        idk maybe for now i just roll with it
-okay next is to get pdbs and params in this same dir as resfiles w
-proper naming scheme
-then run multiple cycles of fd 3bop, followed by filters
-
-'''
-import os
-#########
-pdbsdir='/wynton/home/kortemme/cgalvin/esl/hb3_occ/2np/genpot/clean/enzdes/filtered/analysis/run/filtered2/'
-paramsdir='/wynton/home/kortemme/cgalvin/esl/hb3_occ/2np/genpot/clean/enzdes/filtered/analysis/run/'
+paramsdir='/wynton/home/kortemme/cgalvin/esl4rm_1_bestmatches/enzdes/filtered/analysis/run'
+pdbsdir='/wynton/home/kortemme/cgalvin/esl4rm_1_bestmatches/enzdes/filtered/analysis/run/filtered2'
+############
 allparams=[os.path.join(paramsdir,i) for i in os.listdir(paramsdir) if i[-6:]=='params']
 allpdbs=[os.path.join(pdbsdir,i) for i in os.listdir(pdbsdir) if i[-3:]=='pdb']
 allresfiles=[i for i in os.listdir() if i[-7:]=='resfile']
@@ -3051,6 +3073,11 @@ print(len(allresfiles))
 print(len(spdbs))
 print(len(sparams))
 '''
+447
+447
+712
+
+
 okay having an issue here where there are too many params file,
 i guess ill remove the extraneoius ones but wtf is going on with this?
                 SKETCHY
@@ -3072,7 +3099,11 @@ allresfiles=[i for i in os.listdir() if i[-7:]=='resfile']
 print(len(allresfiles))
 print(len(allpdbs))
 print(len(allparams))
-
+'''
+447
+447
+447
+'''
 
 
 
@@ -3083,21 +3114,21 @@ FASTDESIGN with 3bop weight 5
 no intup
 some filters but no ddg/boltz
 '''
-# FASTDESIGN with 3bop weight 5, intup weight 2
+# FASTDESIGN with beta nov16 sf
 import os
 ########
 allparams=[i for i in os.listdir() if i[-6:]=='params']
 prm1=allparams[0]
-sfname='fd3bopmpnn.sh'
-ndesignseachmatch='5'
-outputdirectory='fd_3bop_mpnn'
-scorefile_name='esl_fd_3bop_mpnn.json'
+sfname='fdmpnn.sh'
+ndesignseachmatch='10'
+outputdirectory='fd_mpnn'
+scorefile_name='esl_fd_mpnn.json'
 #########
 matches=[i for i in os.listdir() if i[-3:]=='pdb']
 os.makedirs('cluster_output',exist_ok=True)
 os.makedirs(outputdirectory,exist_ok=True)
 c=1
-for xx in range(20):     #this way i can spread across more nodes if neccessary
+for xx in range(10):     #this way i can spread across more nodes if neccessary
     output_prefix='fd'+str(c)
     sf=open('_'+str(c)+sfname,'w')
     sf.write('#!/bin/bash')
@@ -3117,6 +3148,7 @@ for xx in range(20):     #this way i can spread across more nodes if neccessary
          '-out:nstruct',ndesignseachmatch,
          # '-score:set_weights','hbond_bb_sc','2.0',
          # '-score:set_weights','hbond_sc','2.0',
+         '-beta_nov16',
          '-load_PDB_components','False',
          '-out:path:all',outputdirectory,
          '-out:prefix',output_prefix,
@@ -3129,23 +3161,22 @@ for xx in range(20):     #this way i can spread across more nodes if neccessary
 print(len(matches))
 '''
 print(len(matches))
-155
+447
 
-~/main/source/bin/rosetta_scripts.default.linuxgccrelease -s ed9UM_1_L53F106Y57S101S35_1_relaxed_relaxed_5tpj_67405_design_4_unrelaxed_model_5_rank_1_0001_design_7_unrelaxed_model_2_rank_1_0001_design_8_unrelaxed_model_2_rank_1_0001_hybrid_105_1_clean__DE_8_0001_oglig_0001.pdb -parser:protocol ~/BSFF/tools/fd3bop_mpnn.xml -parser:view -run:preserve_header -in:file::extra_res_fa ed13UM_1_L51M99Y18T108S48_1_relaxed_relaxed_5tpj_144267_design_10_unrelaxed_model_2_rank_1_0001_design_8_unrelaxed_model_2_rank_1_0001_design_4_unrelaxed_model_2_rank_1_0001_hybrid_193_1_clean__DE_2_0001_oglig_0001.params -resfile ed9UM_1_L53F106Y57S101S35_1_relaxed_relaxed_5tpj_67405_design_4_unrelaxed_model_5_rank_1_0001_design_7_unrelaxed_model_2_rank_1_0001_design_8_unrelaxed_model_2_rank_1_0001_hybrid_105_1_clean__DE_8_0001_oglig_0001.resfile -ex1 -ex2 -extrachi_cutoff 0 -use_input_sc -out:nstruct 1 -load_PDB_components False -out:path:all fd_3bop_mpnn -out:prefix fd1 -scorefile_format json -out:file:scorefile esl_fd_3bop_mpnn.json
 
+~/main/source/bin/rosetta_scripts.default.linuxgccrelease -s ed1UM_18_F112W57T31S107_1_relaxed_relaxed_5tpj_96333_design_10_unrelaxed_model_1_rank_1_0001_design_5_unrelaxed_model_2_rank_1_0001_design_8_unrelaxed_model_2_rank_1_0001_hybrid_95_1_0001_clean__DE_10_oglig_0001.pdb -parser:protocol ~/BSFF/tools/fd3bop_mpnn.xml -parser:view -run:preserve_header -in:file::extra_res_fa ed1UM_2_M58S109S95W93_1_relaxed_relaxed_5tpj_363097_design_7_unrelaxed_model_3_rank_1_0001_design_2_unrelaxed_model_4_rank_1_0001_design_1_unrelaxed_model_2_rank_1_0001_hybrid_52_1_0001_clean__DE_12_oglig_0001.params -resfile ed1UM_18_F112W57T31S107_1_relaxed_relaxed_5tpj_96333_design_10_unrelaxed_model_1_rank_1_0001_design_5_unrelaxed_model_2_rank_1_0001_design_8_unrelaxed_model_2_rank_1_0001_hybrid_95_1_0001_clean__DE_10_oglig_0001.resfile -ex1 -ex2 -extrachi_cutoff 0 -use_input_sc -out:nstruct 10 -beta_nov16 -load_PDB_components False -out:path:all fd_mpnn -out:prefix fd1 -scorefile_format json -out:file:scorefile esl_fd_mpnn.json
 '''
 import os
-sfname='fd3bopmpnn.sh'
+sfname='fdmpnn.sh'
 jobss=[i for i in os.listdir() if sfname in i]
 for j in jobss:
-    cmd='qsub -cwd -t 1-155 -l mem_free=4G -o cluster_out -e cluster_out '+j
+    cmd='qsub -cwd -t 1-447 -l mem_free=4G -o cluster_out -e cluster_out '+j
     os.system(cmd)
 
 
 
 '''
-only took like 4 hours to do 5desx20 jobs on 155 structures
-
+/wynton/home/kortemme/cgalvin/esl4rm_1_bestmatches/enzdes/filtered/analysis/run/filtered2/mpnn/resfiles/fd_mpnn
 '''
 
 
@@ -3155,17 +3186,13 @@ only took like 4 hours to do 5desx20 jobs on 155 structures
 
 SCORESCORESCORESCORESCORESCORESCORESCORESCORESCORESCORESCORE
 
-/wynton/home/kortemme/cgalvin/esl/hb3_occ/2np/genpot/clean/enzdes/filtered/analysis/run/filtered2/mpnn/resfiles/fd_3bop_mpnn
-
 '''
 
 
 
 
 #analysis of scores from json file
-sfname='esl_fd_3bop_mpnn.json'
-
-
+sfname='esl_fd_mpnn.json'
 import json
 bad=[]
 scores=[]
@@ -3174,18 +3201,336 @@ for line in open(sfname,'r'):
         scores.append(json.loads(line))
     except:
         bad.append(line)
+print(len(bad))
+print(len(scores))
+ic=0
+for d in scores:
+    # print(ic)
+    # ic+=1
+    try:
+        if len(d.keys())<5:
+            scores.remove(d)
+    except:
+        scores.remove(d)
+print(len(scores))
 for line in bad:
     ids=[]
     for ii,i in enumerate(line):
         if i=='}':
             ids.append(ii)
-    if len(ids)==2:
-        l1=line[:ids[0]+1]
-        l2=line[ids[0]+1:]
-        scores.append(l1)
-        scores.append(l2)
+    if len(ids)==0:
+        if len(line)>100:
+            if line[-1]=='}':
+                if line[0]!='{':
+                    ll='{'+line
+                    line=ll
+                if line[0]=='{' and line[1]=='{':
+                    ll=line[1:]
+                    line=ll
+                try:
+                    scores.append(json.loads(line))
+                except:
+                    pass
+        bad.remove(line)
+    elif len(ids)==1:
+        l1=line[:ids[0]+1].strip('\n')
+        if len(l1)>100:
+            if l1[-1]=='}':
+                if l1[0]!='{':
+                    ll='{'+l1
+                    l1=ll
+                if l1[0]=='{' and l1[1]=='{':
+                    ll=l1[1:]
+                    l1=ll
+                try:
+                    scores.append(json.loads(l1))
+                except:
+                    pass
+        bad.remove(line)
+    elif len(ids)==2:
+        l1=line[:ids[0]+1].strip('\n')
+        l2=line[ids[0]+1:].strip('\n')
+        if len(l1)>100:
+            if l1[-1]=='}':
+                if l1[0]!='{':
+                    ll='{'+l1
+                    l1=ll
+                if l1[0]=='{' and l1[1]=='{':
+                    ll=l1[1:]
+                    l1=ll
+                try:
+                    scores.append(json.loads(l1))
+                except:
+                    pass
+        if len(l2)>100:
+            if l2[-1]=='}':
+                if l2[0]!='{':
+                    ll='{'+l2
+                    l2=ll
+                if l2[0]=='{' and l2[1]=='{':
+                    ll=l2[1:]
+                    l2=ll
+                try:
+                    scores.append(json.loads(l2))
+                except:
+                    pass
+        bad.remove(line)
+    elif len(ids)==3:
+        l1=line[:ids[0]+1].strip('\n')
+        l2=line[ids[0]+1:ids[1]+1].strip('\n')
+        l3=line[ids[1]+1:].strip('\n')
+        if len(l1)>100:
+            if l1[-1]=='}':
+                if l1[0]!='{':
+                    ll='{'+l1
+                    l1=ll
+                if l1[0]=='{' and l1[1]=='{':
+                    ll=l1[1:]
+                    l1=ll
+                try:
+                    scores.append(json.loads(l1))
+                except:
+                    pass
+        if len(l2)>100:
+            if l2[-1]=='}':
+                if l2[0]!='{':
+                    ll='{'+l2
+                    l2=ll
+                if l2[0]=='{' and l2[1]=='{':
+                    ll=l2[1:]
+                    l2=ll
+                try:
+                    scores.append(json.loads(l2))
+                except:
+                    pass
+        if len(l3)>100:
+            if l3[-1]=='}':
+                if l3[0]!='{':
+                    ll='{'+l3
+                    l3=ll
+                if l3[0]=='{' and l3[1]=='{':
+                    ll=l3[1:]
+                    l3=ll
+                try:
+                    scores.append(json.loads(l3))
+                except:
+                    pass
+        bad.remove(line)
+    elif len(ids)==4:
+        l1=line[:ids[0]+1].strip('\n')
+        l2=line[ids[0]+1:ids[1]+1].strip('\n')
+        l3=line[ids[1]+1:ids[2]+1].strip('\n')
+        l4=line[ids[2]+1:].strip('\n')
+        if len(l1)>100:
+            if l1[-1]=='}':
+                if l1[0]!='{':
+                    ll='{'+l1
+                    l1=ll
+                if l1[0]=='{' and l1[1]=='{':
+                    ll=l1[1:]
+                    l1=ll
+                try:
+                    scores.append(json.loads(l1))
+                except:
+                    pass
+        if len(l2)>100:
+            if l2[-1]=='}':
+                if l2[0]!='{':
+                    ll='{'+l2
+                    l2=ll
+                if l2[0]=='{' and l2[1]=='{':
+                    ll=l2[1:]
+                    l2=ll
+                try:
+                    scores.append(json.loads(l2))
+                except:
+                    pass
+        if len(l3)>100:
+            if l3[-1]=='}':
+                if l3[0]!='{':
+                    ll='{'+l3
+                    l3=ll
+                if l3[0]=='{' and l3[1]=='{':
+                    ll=l3[1:]
+                    l3=ll
+                try:
+                    scores.append(json.loads(l3))
+                except:
+                    pass
+        if len(l4)>100:
+            if l4[-1]=='}':
+                if l4[0]!='{':
+                    ll='{'+l4
+                    l4=ll
+                if l4[0]=='{' and l4[1]=='{':
+                    ll=l4[1:]
+                    l4=ll
+                try:
+                    scores.append(json.loads(l4))
+                except:
+                    pass
+        bad.remove(line)
+    elif len(ids)==5:
+        l1=line[:ids[0]+1].strip('\n')
+        l2=line[ids[0]+1:ids[1]+1].strip('\n')
+        l3=line[ids[1]+1:ids[2]+1].strip('\n')
+        l4=line[ids[2]+1:ids[3]+1].strip('\n')
+        l5=line[ids[3]+1:].strip('\n')
+        if len(l1)>100:
+            if l1[-1]=='}':
+                if l1[0]!='{':
+                    ll='{'+l1
+                    l1=ll
+                if l1[0]=='{' and l1[1]=='{':
+                    ll=l1[1:]
+                    l1=ll
+                try:
+                    scores.append(json.loads(l1))
+                except:
+                    pass
+        if len(l2)>100:
+            if l2[-1]=='}':
+                if l2[0]!='{':
+                    ll='{'+l2
+                    l2=ll
+                if l2[0]=='{' and l2[1]=='{':
+                    ll=l2[1:]
+                    l2=ll
+                try:
+                    scores.append(json.loads(l2))
+                except:
+                    pass
+        if len(l3)>100:
+            if l3[-1]=='}':
+                if l3[0]!='{':
+                    ll='{'+l3
+                    l3=ll
+                if l3[0]=='{' and l3[1]=='{':
+                    ll=l3[1:]
+                    l3=ll
+                try:
+                    scores.append(json.loads(l3))
+                except:
+                    pass
+        if len(l4)>100:
+            if l4[-1]=='}':
+                if l4[0]!='{':
+                    ll='{'+l4
+                    l4=ll
+                if l4[0]=='{' and l4[1]=='{':
+                    ll=l4[1:]
+                    l4=ll
+                try:
+                    scores.append(json.loads(l4))
+                except:
+                    pass
+        if len(l5)>100:
+            if l5[-1]=='}':
+                if l5[0]!='{':
+                    ll='{'+l5
+                    l5=ll
+                if l5[0]=='{' and l5[1]=='{':
+                    ll=l5[1:]
+                    l5=ll
+                try:
+                    scores.append(json.loads(l5))
+                except:
+                    pass
+        bad.remove(line)
+    elif len(ids)==6:
+        l1=line[:ids[0]+1].strip('\n')
+        l2=line[ids[0]+1:ids[1]+1].strip('\n')
+        l3=line[ids[1]+1:ids[2]+1].strip('\n')
+        l4=line[ids[2]+1:ids[3]+1].strip('\n')
+        l5=line[ids[3]+1:ids[4]+1].strip('\n')
+        l6=line[ids[4]+1:].strip('\n')
+        if len(l1)>100:
+            if l1[-1]=='}':
+                if l1[0]!='{':
+                    ll='{'+l1
+                    l1=ll
+                if l1[0]=='{' and l1[1]=='{':
+                    ll=l1[1:]
+                    l1=ll
+                try:
+                    scores.append(json.loads(l1))
+                except:
+                    pass
+        if len(l2)>100:
+            if l2[-1]=='}':
+                if l2[0]!='{':
+                    ll='{'+l2
+                    l2=ll
+                if l2[0]=='{' and l2[1]=='{':
+                    ll=l2[1:]
+                    l2=ll
+                try:
+                    scores.append(json.loads(l2))
+                except:
+                    pass
+        if len(l3)>100:
+            if l3[-1]=='}':
+                if l3[0]!='{':
+                    ll='{'+l3
+                    l3=ll
+                if l3[0]=='{' and l3[1]=='{':
+                    ll=l3[1:]
+                    l3=ll
+                try:
+                    scores.append(json.loads(l3))
+                except:
+                    pass
+        if len(l4)>100:
+            if l4[-1]=='}':
+                if l4[0]!='{':
+                    ll='{'+l4
+                    l4=ll
+                if l4[0]=='{' and l4[1]=='{':
+                    ll=l4[1:]
+                    l4=ll
+                try:
+                    scores.append(json.loads(l4))
+                except:
+                    pass
+        if len(l5)>100:
+            if l5[-1]=='}':
+                if l5[0]!='{':
+                    ll='{'+l5
+                    l5=ll
+                if l5[0]=='{' and l5[1]=='{':
+                    ll=l5[1:]
+                    l5=ll
+                try:
+                    scores.append(json.loads(l5))
+                except:
+                    pass
+        if len(l6)>100:
+            if l6[-1]=='}':
+                if l6[0]!='{':
+                    ll='{'+l6
+                    l6=ll
+                if l6[0]=='{' and l6[1]=='{':
+                    ll=l6[1:]
+                    l6=ll
+                try:
+                    scores.append(json.loads(l6))
+                except:
+                    pass
+        bad.remove(line)
 terms=list(scores[0].keys())
 print(len(bad))
+print(len(scores))
+
+'''
+264
+43693
+43693
+132
+43849
+'''
+
+
+
 #make a pdf showing all score distributions
 ######
 from matplotlib.backends.backend_pdf import PdfPages
@@ -3210,7 +3555,7 @@ def plot_dists(terms,scores,outfilename):
             plt.clf()
     pdf.close()
 
-plot_dists(terms,scores,'esl_fd3bmpnn.pdf')
+# plot_dists(terms,scores,'esl_fd3bmpnn.pdf')
 
 def return_filtered(scores,term,condition,threshold):
     filtered_scores=[]
@@ -3231,17 +3576,22 @@ def return_filtered(scores,term,condition,threshold):
             print(d)
     return filtered_scores
 
-f1=return_filtered(scores,'buns2interface','<',0.0)
-f2=return_filtered(f1,'lighphobesasa','<',20.0)
-f3=return_filtered(f2,'hbtolig','>',3.0)
-f4=return_filtered(f3,'contact_molsurf','>',160.0)
-f5=return_filtered(f4,'buns_bb_heavy','<',4.0)
-f6=return_filtered(f5,'packstat','>',0.65)
-f7=return_filtered(f6,'oversat','<',0.0)
-f8=return_filtered(f7,'ligoversat','<',0.0)
-f9=return_filtered(f8,'buns_sc_heavy','<',0.0)
-f10=return_filtered(f9,'exphyd','<',850.0)
-f11=return_filtered(f9,'shape_comp','>',0.65)
+#
+f1=return_filtered(scores,'buns2interface','<',1.0)
+f2=return_filtered(f1,'contact_molsurf','>',165)
+f3=return_filtered(f2,'hbtolig','>',2.0)
+f4=return_filtered(f3,'shape_comp','>',0.65)
+f5=return_filtered(f4,'lighphobesasa','<',40.0)
+f6=return_filtered(f5,'packstat','>',0.6)
+f7=return_filtered(f6,'buns_bb_heavy','<',5)
+f8=return_filtered(f7,'buns_sc_heavy','<',1)
+f9=return_filtered(f8,'ligoversat','<',0)
+f10=return_filtered(f9,'oversat','<',0)
+f11=return_filtered(f10,'exphyd','<',1300)
+f12=return_filtered(f11,'cav','<',140)
+#
+# plot_dists(terms,f7,'4rmb5bindingmetfilt.pdf')
+#
 print(len(scores))
 print(len(f1))
 print(len(f2))
@@ -3254,43 +3604,103 @@ print(len(f8))
 print(len(f9))
 print(len(f10))
 print(len(f11))
+print(len(f12))
 '''
-15494
-11937
-11768
-11208
-10322
-6895
-1679
-1670
-1670
-974
-965
-959
+43849
+38332
+34032
+33355
+30971
+30965
+19374
+16267
+8280
+8241
+7351
+5836
+5801
 '''
 import os
 filtered_strc=[]
-for d in f11:
+for d in f12:
     filtered_strc.append(d['decoy'])
-os.makedirs('filtered_fd3bop2',exist_ok=True)
+os.makedirs('filtered2',exist_ok=True)
 for i in filtered_strc:
-    os.system('cp '+i+'.pdb filtered_fd3bop2/'+i+'.pdb')
-os.system('mv *.pdf filtered_fd3bop2/')
+    ########################################
+    os.system('cp '+i+'.pdb filtered2/'+i+'.pdb')
+    ########################################
+# os.system('mv *.pdf filtered2/')
 
 '''
-all
-21
-12
-18
-9
+/wynton/home/kortemme/cgalvin/esl4rm_1_bestmatches/enzdes/filtered/analysis/run/filtered2/mpnn/resfiles/fd_mpnn/filtered2
 
-filtered
-10
-8
-10
-8
-scp -r cgalvin@log2.wynton.ucsf.edu:/wynton/home/kortemme/cgalvin/esl/hb3_occ/2np/genpot/clean/enzdes/filtered/analysis/run/filtered2/mpnn/resfiles/fd_3bop_mpnn/filtered_fd3bop ~/desktop/eslfd3bmpnnfilt
+DIVERSITY AMONGST FILTERED DESIGNS
+
 '''
+import os
+des=[i for i in os.listdir() if i[-3:]=='pdb']
+
+
+motifs=[]
+scaffs=[]
+pairs=[]
+for d in des:
+    s=d.split('.')[0]
+    motif=s.split('_')[-10]
+    scaffold=('_').join(s.split('_')[7:-10])
+    motifs.append(motif)
+    scaffs.append(scaffold)
+    pairs.append((motif,scaffold))
+
+
+# print(len(motifs))
+# print(len(scaffs))
+# print(len(pairs))
+print(len(set(des)))
+print(len(set(motifs)))
+print(len(set(scaffs)))
+print(len(set(pairs)))
+'''
+455
+19
+167
+245
+'''
+same_scaff_diff_match={}
+for scaff in set(scaffs):
+    l=[]
+    for d in des:
+        s=d.split('.')[0]
+        scaffold=('_').join(s.split('_')[3:-9])
+        if scaffold==scaff:
+            match=s.split('_')[2]
+            if match not in l:
+                l.append(match)
+    same_scaff_diff_match[scaff]=l
+
+for key in same_scaff_diff_match.keys():
+    if len(same_scaff_diff_match[key])>1:
+        print(key)
+        print(same_scaff_diff_match[key])
+'''
+/wynton/home/kortemme/cgalvin/esl4rm_1_bestmatches/enzdes/filtered/analysis/run/filtered2/mpnn/resfiles/fd_mpnn/filtered2
+
+
+I think the next move should be to apply the hbond refinement script to all of these
+followed by fragment quality filtering
+and then finally alphafold
+
+
+TESTING SOME CHANGES TO THE SCRIPT 
+time python3 ~/desktop/BSFF/tools/refine_filtered_designs.py ~/desktop/esl.params ed1UM_9_M98T110S58S61_1_relaxed_relaxed_5tpj_39178_design_10_unrelaxed_model_2_rank_1_0001_design_8_unrelaxed_model_2_rank_1_0001_design_9_unrelaxed_model_2_rank_1_0001_hybrid_39_1_0001_clean__DE_24_oglig_0001.pdb solutions
+time python3 ~/desktop/BSFF/tools/refine_filtered_designs.py ~/desktop/esl.params ed1UM_63_M89Y42S13N112_1_relaxed_relaxed_5tpj_371721_design_5_unrelaxed_model_3_rank_1_0001_design_8_unrelaxed_model_2_rank_1_0001_design_10_unrelaxed_model_2_rank_1_0001_hybrid_5_1_0001_clean__DE_20_oglig_0001.pdb solutions
+time python3 ~/desktop/BSFF/tools/refine_filtered_designs.py ~/desktop/esl.params ed1UM_35_M96Y31S65N61_1_relaxed_relaxed_5tpj_140033_design_10_unrelaxed_model_5_rank_1_0001_design_7_unrelaxed_model_2_rank_1_0001_design_2_unrelaxed_model_2_rank_1_0001_hybrid_5_1_0001_clean__DE_7_oglig_0001.pdb solutions
+time python3 ~/desktop/BSFF/tools/refine_filtered_designs.py ~/desktop/esl.params ed1UM_10_L58Y87Q36T110_1_relaxed_relaxed_5tpj_176872_design_8_unrelaxed_model_2_rank_1_0001_design_2_unrelaxed_model_2_rank_1_0001_design_2_unrelaxed_model_2_rank_1_0001_hybrid_1_1_0001_clean__DE_4_oglig_0001.pdb solutions
+time python3 ~/desktop/BSFF/tools/refine_filtered_designs.py ~/desktop/esl.params ed1UM_10_F95T88T17Y38_1_relaxed_relaxed_5tpj_128842_design_5_unrelaxed_model_1_rank_1_0001_design_1_unrelaxed_model_4_rank_1_0001_design_2_unrelaxed_model_1_rank_1_0001_hybrid_10_1_0001_clean__DE_29_oglig_0001.pdb solutions
+
+
+'''
+
 
 
 

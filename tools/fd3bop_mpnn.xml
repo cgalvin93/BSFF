@@ -1,12 +1,12 @@
 <ROSETTASCRIPTS>
   <SCOREFXNS>
-    <ScoreFunction name="beta" weights="ref2015"/>
-    <ScoreFunction name="sfxn_design" weights="ref2015" >
+    <ScoreFunction name="beta" weights="beta_nov16"/>
+    <!-- <ScoreFunction name="sfxn_design" weights="ref2015" >
         <Reweight scoretype="approximate_buried_unsat_penalty" weight="5" />
         <Set approximate_buried_unsat_penalty_burial_probe_radius="2.3" />
         <Set approximate_buried_unsat_penalty_burial_atomic_depth="4.0" />
         <Set approximate_buried_unsat_penalty_hbond_energy_threshold="-0.5" />
-    </ScoreFunction>
+    </ScoreFunction> -->
   </SCOREFXNS>
   <RESIDUE_SELECTORS>
     <Chain name="chX" chains="X"/>
@@ -38,7 +38,7 @@
     <SasaMetric name="lig_hphobe_sasa" residue_selector="chX" sasa_metric_mode="hydrophobic_sasa" />
   </SIMPLE_METRICS>
   <MOVERS>
-    <FastRelax name="fd" scorefxn="sfxn_design" task_operations="resfile,ifc" repeats="4"/>
+    <FastRelax name="fd" scorefxn="beta" task_operations="resfile,ifc" repeats="3"/>
     <RunSimpleMetrics name="run_metrics1" metrics="lig_hphobe_sasa" prefix="lighphobe"/>
   </MOVERS>
   <PROTOCOLS>
