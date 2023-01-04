@@ -3863,6 +3863,9 @@ SUBMIT FRAGMENT PICKING JOBS
 import os
 l=[i for i in os.listdir() if i[-5:]=='fasta']
 
+# l.remove('fd9ed1UM_9_M55W62S109S51_1_relaxed_relaxed_5tpj_150791_design_8_unrelaxed_model_1_rank_1_0001_design_1_unrelaxed_model_3_rank_1_0001_design_4_unrelaxed_model_2_rank_1_0001_hybrid_16_1_0001_clean__DE_16_oglig_0001_0002_unrefined.fasta')
+
+
 c=1
 for fastaf in l:
     print(c)
@@ -3875,7 +3878,16 @@ for fastaf in l:
 '''
 on a test file it looks like job only takes about 12.4 G memory max, so Im
 gonna change the 'submit...wynton.sh' script to only request 40G, which should
-be way more than enough 
+be way more than enough
+
+IF I EVER HAVE LARGER PROTEINS, I SHOULD BE SURE TO CHANGE THIS TO A HIGHER VALUE
+AS NECCESSARY
+
+
+ONLY ABOUT 25-30 MIN for jobs of these size ptns
+
+
+output has name inpuA.200.9mers
 '''
 
 
