@@ -3661,10 +3661,10 @@ print(len(set(motifs)))
 print(len(set(scaffs)))
 print(len(set(pairs)))
 '''
-455
-19
-167
-245
+5801
+18
+131
+173
 '''
 same_scaff_diff_match={}
 for scaff in set(scaffs):
@@ -3691,7 +3691,7 @@ followed by fragment quality filtering
 and then finally alphafold
 
 
-TESTING SOME CHANGES TO THE SCRIPT 
+TESTING SOME CHANGES TO THE SCRIPT
 time python3 ~/desktop/BSFF/tools/refine_filtered_designs.py ~/desktop/esl.params ed1UM_9_M98T110S58S61_1_relaxed_relaxed_5tpj_39178_design_10_unrelaxed_model_2_rank_1_0001_design_8_unrelaxed_model_2_rank_1_0001_design_9_unrelaxed_model_2_rank_1_0001_hybrid_39_1_0001_clean__DE_24_oglig_0001.pdb solutions
 time python3 ~/desktop/BSFF/tools/refine_filtered_designs.py ~/desktop/esl.params ed1UM_63_M89Y42S13N112_1_relaxed_relaxed_5tpj_371721_design_5_unrelaxed_model_3_rank_1_0001_design_8_unrelaxed_model_2_rank_1_0001_design_10_unrelaxed_model_2_rank_1_0001_hybrid_5_1_0001_clean__DE_20_oglig_0001.pdb solutions
 time python3 ~/desktop/BSFF/tools/refine_filtered_designs.py ~/desktop/esl.params ed1UM_35_M96Y31S65N61_1_relaxed_relaxed_5tpj_140033_design_10_unrelaxed_model_5_rank_1_0001_design_7_unrelaxed_model_2_rank_1_0001_design_2_unrelaxed_model_2_rank_1_0001_hybrid_5_1_0001_clean__DE_7_oglig_0001.pdb solutions
@@ -3699,6 +3699,69 @@ time python3 ~/desktop/BSFF/tools/refine_filtered_designs.py ~/desktop/esl.param
 time python3 ~/desktop/BSFF/tools/refine_filtered_designs.py ~/desktop/esl.params ed1UM_10_F95T88T17Y38_1_relaxed_relaxed_5tpj_128842_design_5_unrelaxed_model_1_rank_1_0001_design_1_unrelaxed_model_4_rank_1_0001_design_2_unrelaxed_model_1_rank_1_0001_hybrid_10_1_0001_clean__DE_29_oglig_0001.pdb solutions
 
 
+
+
+
+INDIVIDUAL MUTATIONS FOR REFINEMENT
+'''
+
+import os
+#get a params file from old directory (og params)
+params_dir='/wynton/home/kortemme/cgalvin/esl4rm_1_bestmatches/enzdes/filtered/analysis/run'
+allparams=[os.path.join(params_dir,i) for i in os.listdir(params_dir) if i[-6:]=='params']
+prm1=allparams[0]
+sfname='refine.sh'
+#
+inputs_dir='/wynton/home/kortemme/cgalvin/esl4rm_1_bestmatches/enzdes/filtered/analysis/run/filtered2/mpnn/resfiles/fd_mpnn/filtered2'
+matches=[i for i in os.listdir(inputs_dir) if i[-3:]=='pdb']
+print(len(matches))
+#
+#########
+###########
+try:
+    os.system('rm -r cluster_output')
+except:
+    pass
+os.makedirs('cluster_output',exist_ok=True)
+###########
+sf=open(sfname,'w')
+sf.write('#!/bin/bash')
+sf.write('\nsource ~/anaconda3/etc/profile.d/conda.sh\n')
+sf.write('conda activate pyr37\n')
+sf.write('\n')
+sf.write('tasks=(0\n')
+for match in matches[:-1]:
+    sf.write('       '+str(match.strip('.pdb'))+'\n')
+sf.write('       '+matches[-1].strip('.pdb')+')')
+sf.write('\n')
+cmd=['time python3',
+     '~/BSFF/tools/refine_filtered_designs.py',
+     prm1,
+     '${tasks[$SGE_TASK_ID]}.pdb',
+     'refined']
+sf.write((' ').join(cmd))
+sf.write('\nqstat -j "$JOB_ID"')
+sf.close()
+print(len(matches))
+'''
+5801
+
+
+time python3 ~/BSFF/tools/refine_filtered_designs.py /wynton/home/kortemme/cgalvin/esl4rm_1_bestmatches/enzdes/filtered/analysis/run/ed1UM_27_M99S111S88W59_1_relaxed_relaxed_5tpj_144267_design_10_unrelaxed_model_2_rank_1_0001_design_8_unrelaxed_model_2_rank_1_0001_design_5_unrelaxed_model_2_rank_1_0001_hybrid_52_1_0001_clean__DE_3.params fd5ed1UM_5_L52S37T91W18_1_relaxed_relaxed_5tpj_294053_design_9_unrelaxed_model_3_rank_1_0001_design_6_unrelaxed_model_3_rank_1_0001_design_4_unrelaxed_model_2_rank_1_0001_hybrid_107_1_0001_clean__DE_4_oglig_0001_0010.pdb refined
+
+'''
+import os
+sfname='refine.sh'
+cmd='qsub -cwd -t 1-5801 -l mem_free=2G -o cluster_output -e cluster_output '+sfname
+os.system(cmd)
+
+'''
+/wynton/home/kortemme/cgalvin/esl4rm_1_bestmatches/enzdes/filtered/analysis/run/filtered2/mpnn/resfiles/fd_mpnn/filtered2/refined
+
+In [1]: import os
+
+In [2]: len(os.listdir())
+Out[2]: 5231
 '''
 
 
@@ -3706,6 +3769,114 @@ time python3 ~/desktop/BSFF/tools/refine_filtered_designs.py ~/desktop/esl.param
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+'''
+FRAGQUAL ANALYSIS
+
+/wynton/home/kortemme/cgalvin/esl4rm_1_bestmatches/enzdes/filtered/analysis/run/filtered2/mpnn/resfiles/fd_mpnn/filtered2/refined
+
+'''
+import os
+l=[i for i in os.listdir() if i[-3:]=='pdb']
+print(len(l))
+
+'''
+make fasta files
+'''
+from pyrosetta import *
+init('-ignore_unrecognized_res -load_PDB_components False') #because of this the ligand shouldnt be there
+def fasta(pdb):
+    p=pose_from_pdb(pdb)
+    sequence=str(p.sequence())
+    print(sequence)
+    ofile=open(pdb[:-4]+'.fasta','w')
+    ofile.write('>'+pdb+ '\n')
+    length=len(sequence)
+    remainder=length%60; n_seg=length/60
+    indices=[]
+    if length-remainder!=0:
+        for i in range(0,60,length-remainder):
+            indices.append(i)
+    else:
+        for i in range(0,60,length):
+            indices.append(i)
+    for i,x in enumerate(indices[:-1]):
+        start=x
+        end=indices[i+1]
+        s=sequence[start:end]+'\n'
+        ofile.write(s)
+    last_lim=indices[-1]
+    last_s=sequence[last_lim:length]
+    ofile.write(str(last_s) +'\n')
+    ofile.close()
+
+c=1
+for a in l:
+    print(c)
+    c+=1
+    try:
+        fasta(a)
+    except:
+        print('failure')
+
+os.makedirs('fastas',exist_ok=True)
+l2=[i for i in os.listdir() if i[-6:]=='.fasta']
+for i in l2:
+    os.system('mv '+i+' fastas/'+i)
+
+############################
+##############
+##############
+##############
+##############
+'''
+SUBMIT FRAGMENT PICKING JOBS
+'''
+##############
+##############
+##############
+##############
+############################
+import os
+l=[i for i in os.listdir() if i[-5:]=='fasta']
+
+c=1
+for fastaf in l:
+    print(c)
+    c+=1
+    s=fastaf.split('.')[0]
+    inf=os.path.join(os.getcwd(),fastaf)
+    cmd='time python ~/BSFF/tools/fragment_picker/workingfragpick.py '+inf+' '+s
+    os.system(cmd)
+
+'''
+on a test file it looks like job only takes about 12.4 G memory max, so Im
+gonna change the 'submit...wynton.sh' script to only request 40G, which should
+be way more than enough 
+'''
 
 
 
