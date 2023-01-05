@@ -1,21 +1,15 @@
-#time ipython ~/desktop/tools/fragment_quality.py des9mers des.pdb
+#time ipython ~/desktop/tools/fragment_quality.py des9mers des.pdb outputjsonname
 #script assumes 200 fragments in frag libraries for each segment
-#takes as input on command line the 9mers file and pdb for a given design
-#time ipython ~/desktop/tools/fragqual_scaffolds.py design_9mers design.pdb
-#returns the number of good frags (rmsd < 1) over the total number of frags
-#returns the coverage metric, which i dont fully understand
-#returns the average rmsd of all fragments
-#returns the minimum rmsd fragment for each segment, along with the maximum of these values
 
 #example command:
-#time ipython ~/desktop/tools/fragqual_scaffolds.py frags/UM_1_F31W35W53_1_model_403374_IBP_BSFF_v2_new_1_0002.9mers UM_1_F31W35W53_1_model_403374_IBP_BSFF_v2_new_1_0002.pdb
+#time ipython ~/desktop/tools/fragqual_scaffolds.py frags/UM_1_F31W35W53_1_model_403374_IBP_BSFF_v2_new_1_0002.9mers UM_1_F31W35W53_1_model_403374_IBP_BSFF_v2_new_1_0002.pdb fragscores.json
 
 import sys
 # import os
 import numpy as np
 import pandas as pd
 from pyrosetta import *
-init('ignore_unrecognized_res')
+init('-ignore_unrecognized_res')
 # init( "-ignore_zero_occupancy false" )
 #from  pyrosetta.rosetta.core.scoring import *
 
@@ -26,6 +20,7 @@ fragset9.read_fragment_file(sys.argv[1])
 #load design pdb and params file
 designs=[sys.argv[2]]
 # paramsfile=[sys.argv[3]]
+outputjsonname=sys.argv[3]
 
 #open text file to write results
 outfilename='frag_filters.txt'
@@ -110,7 +105,4 @@ else:
     df.to_csv(dfname, index=False, sep='\t', mode='a')
 
 import json
-if os.path.exists('fragment_filters.json'):
-    json.dump(resultsdict,open('fragment_filters.json','a'))
-else:
-    json.dump(resultsdict,open('fragment_filters.json','w'))
+json.dump(resultsdict,open(outputjsonname,'w'))

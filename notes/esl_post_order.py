@@ -3888,7 +3888,208 @@ ONLY ABOUT 25-30 MIN for jobs of these size ptns
 
 
 output has name inpuA.200.9mers
+
+
+
+
+NOW APPLYING FRAGMENT QUALITY FILTER
+/wynton/home/kortemme/cgalvin/esl4rm_1_bestmatches/enzdes/filtered/analysis/run/filtered2/mpnn/resfiles/fd_mpnn/filtered2/refined
+
 '''
+import os
+
+###################
+####################
+jsonoutputdir='fragment_scores'
+os.makedirs(jsonoutputdir,exist_ok=True)
+###################
+###################
+
+pdbs=[i for i in os.listdir() if i[-3:]=='pdb']
+
+inputs_dict={}
+for pdb in pdbs:
+    pdbn=pdb.split('.')[0]
+    fragments_input_path=os.path.join('fastas',pdbn,'fragments','inpuA.200.9mers')
+    if os.path.exists(fragments_input_path):
+        # print('yea')
+        inputs_dict[pdb]=fragments_input_path
+
+shcount=1
+for key in inputs_dict.keys():
+    fraginputpath=inputs_dict[key]
+    fragjsonoutname=os.path.join(jsonoutputdir,'fragment_scores_'+str(shcount)+'.json')
+    of=open('fragqual_'+str(shcount)+'.sh','w')
+    of.write('#!/bin/bash')
+    of.write('\nsource ~/anaconda3/etc/profile.d/conda.sh\n')
+    of.write('conda activate pyr37\n')
+    of.write('\n')
+    cmd=['time python3',
+         '~/BSFF/tools/fragment_picker/fragqual_filter.py',
+         fraginputpath,
+         key,
+         fragjsonoutname]
+    of.write((' ').join(cmd))
+    of.write('\nqstat -j "$JOB_ID"')
+    of.close()
+    shcount+=1
+
+if not os.path.exists('cluster_output'):
+    os.makedirs('cluster_output',exist_ok=True)
+
+import os
+l=[i for i in os.listdir() if 'fragqual_' in i]
+for i in l:
+    cmd='qsub -cwd -l mem_free=2G -o cluster_output -e cluster_output '+i
+    os.system(cmd)
+
+'''
+Your job 959088 ("fragqual_5231.sh") has been submitted
+
+
+/wynton/home/kortemme/cgalvin/esl4rm_1_bestmatches/enzdes/filtered/analysis/run/filtered2/mpnn/resfiles/fd_mpnn/filtered2/refined
+
+
+ONLY TOOK LIKE 2 HRS MAYBE
+
+
+
+ANALYZING FRAGQUAL FILTER RESULTS
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+NEED TO CHANGE FRAGQUAL SCRIPT TO OUTPUT JSON IN A CLEANER WAY SO I CAN ACTUALLY ACCESS ALL
+THE SCORES
+i think the easiest way here is gonna be to just output a different json
+file for each run, then i can later concatenate them all
+fuck it -.-
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+/wynton/home/kortemme/cgalvin/esl4rm_1_bestmatches/enzdes/filtered/analysis/run/filtered2/mpnn/resfiles/fd_mpnn/filtered2/refined/fragment_scores
+
+'''
+#analysis of scores from json file
+sfname='fragment_filters.json'
+##################
+import json
+starts=[]
+ends=[]
+f=open(sfname,'r')
+lines=[line for line in f.readlines()]
+f.close()
+for line in lines:
+    for ind,char in enumerate(line):
+        if char=='{':
+            starts.append(ind)
+        elif char=='}':
+            ends.append(ind)
+
+l=[len(starts),len(ends)]
+scores=[]
+for x in range(min(l)):
+    try:
+        td=lines[0][starts[x]:ends[x]+1]
+        try:
+            scores.append(json.loads(td))
+        except:
+            if len(td)>1:
+                print('\n\n\n\n\n\n\n')
+                print(td)
+                print('\n\n\n\n\n\n\n')
+    except:
+        pass
+terms=list(scores[0].keys())
+print(len(scores))
+'''
+2221
+
+
+'''
+
+#make a pdf showing all score distributions
+######
+from matplotlib.backends.backend_pdf import PdfPages
+import matplotlib.pyplot as plt
+def plot_dists(terms,scores,outfilename):
+    pdf = PdfPages(outfilename)
+    for term in terms:
+        allscores=[]#score
+        if term != 'decoy':
+            for d in scores:
+                try:
+                    allscores.append(float(d[term]))
+                except:
+                    print(d)
+        fig,ax=plt.subplots()
+        if len(allscores)!=0:
+            ax.hist(allscores)#bins=int(len(allscores)/20)
+            ax.set_title(term)
+            ax.set_ylabel('frequency')
+            ax.set_xlabel('score')
+            pdf.savefig()
+            plt.clf()
+    pdf.close()
+
+# plot_dists(terms,scores,'esl_4rm_batch4.pdf')
+
+def return_filtered(scores,term,condition,threshold):
+    filtered_scores=[]
+    for d in scores:
+        try:
+            termval=float(d[term])
+            if condition=='<':
+                if termval<=float(threshold):
+                    filtered_scores.append(d)
+                else:
+                    pass
+            elif condition=='>':
+                if termval>=float(threshold):
+                    filtered_scores.append(d)
+                else:
+                    pass
+        except:
+            print(d)
+    return filtered_scores
+
+f1=return_filtered(scores,'max_min_rmsd','<',1.5)
+f2=return_filtered(f1,'design_avg_rmsd','<',1.5)
+# plot_dists(terms,f3,'esl4rmfilt.pdf')
+print(len(scores))
+print(len(f1))
+print(len(f2))
+# print(len(f5))
+'''
+2221
+259
+181
+
+'''
+import os
+filtered_strc=[]
+for d in f4:
+    nn=d['decoy'][:-5]
+    filtered_strc.append(nn)
+os.makedirs('filtered',exist_ok=True)
+print(len(filtered_strc))
+c=0
+for i in filtered_strc:
+    os.system('cp '+i+'.pdb filtered/'+i+'.pdb')
+    c+=1
+    print(str(c))
+os.system('mv *.pdf filtered/')
+
+
+
+
+
+
+
+
 
 
 
