@@ -4362,4 +4362,131 @@ for i in filtered_strc:
 
 '''
 scp -r cgalvin@log2.wynton.ucsf.edu:/wynton/home/kortemme/cgalvin/esl4rm_1_bestmatches/enzdes/filtered/analysis/run/filtered2/mpnn/resfiles/fd_mpnn/filtered2/refined/filtered/cf/fastas/af2filtered2/filtered ~/desktop/esl_post_order_filtered_designs
+
+
+OKAY YEAH THIS BATCH DOES ALL LOOK PRETTY DAMN GREAT BY EYE TEST
+ALTHOUGH THERE IS A WEIRD SITUATION WITH 3 HBONDS TO A GLUTAMATE CORBXYLATE O
+    (i guess possible cus a resonance strc has 3 lone pairs on one O)
+AND THEN THERE IS INDEED AN UNPAIRED LIG HYDROXYL IN ONE OF THEM, BUT
+THE HBOND NETWORK IS OTHERWISE SO GOOD THAT I THINK IM CONTENT TO ACCEPT IT IN THIS CASE
+
+I think I do actually wanna go ahead and order this 5, and that gives me
+some leeway to make one more batch of designs from which to try to order some more
+'''
+
+
+
+
+
+
+
+
+
+
+
+'''
+
+
+GENE ORDERING
+
+
+'''
+
+
+
+
+'''
+make fastas for designs to order
+we dont include methionine if has one at beginning,
+because in the constructs (pet28+a) there is a start codon before the n terminal
+his tag/thrombin cut site
+we also ensure we are not including the ligand code
+in addition, we add a * at the end of the sequence to specify a stop codon
+
+
+/Users/student/desktop/esl_post_order_filtered_designs/bests
+'''
+
+import os
+l=[i for i in os.listdir() if i[-3:]=='pdb']
+
+d={}
+c=1
+for pdb in l:
+    id='design_'+str(c)
+    d[pdb]=id
+    c+=1
+
+from pyrosetta import *
+init('-ignore_unrecognized_res')
+def fasta(pdb):
+    p=pose_from_pdb(pdb)
+    sequence=str(p.sequence())
+    if sequence[0]=='M':
+        seq2=sequence[1:]
+        sequence=seq2
+    if sequence[-1]=='Z' or sequence[-1]=='X':
+        seq2=sequence[:-1]
+        sequence=seq2
+    ofile=open(pdb[:-4]+'.fasta','w')
+    ofile.write('>'+d[pdb]+ '\n')
+    length=len(sequence)
+    remainder=length%60; n_seg=length/60
+    indices=[]
+    if length-remainder!=0:
+        for i in range(0,60,length-remainder):
+            indices.append(i)
+    else:
+        for i in range(0,60,length):
+            indices.append(i)
+    for i,x in enumerate(indices[:-1]):
+        start=x
+        end=indices[i+1]
+        s=sequence[start:end]+'\n'
+        ofile.write(s)
+    last_lim=indices[-1]
+    last_s=sequence[last_lim:length]
+    ofile.write(str(last_s) +'*\n')
+    ofile.close()
+
+for a in l:
+    try:
+        fasta(a)
+    except:
+        print('failure')
+
+os.makedirs('fastas',exist_ok=True)
+
+ll=[i for i in os.listdir() if i[-6:]=='.fasta']
+for i in ll:
+    os.system('mv '+i+' fastas/'+i)
+
+os.chdir('fastas')
+ll=[i for i in os.listdir() if i[-6:]=='.fasta']
+of=open('allfastas.fasta','w')
+for i in ll:
+    f=open(i,'r')
+    lines=[line for line in f.readlines()]
+    for line in lines:
+        of.write(line)
+    f.close()
+of.close()
+'''
+now on twist website, we order CLONAL GENES
+upload all fasta, codon usage table e.coli
+select all, then 'change vector', --> pet28a+ w/ insertion site ndel-xhol
+download genbank files of sequences and check a couple with snapgene
+    to make sure correct aa sequence
+all default parameters for amount of dna n shit
+order through B002235895
+
+
+'''
+
+ '''
+ Plasmids (pET-28a(+)) encoding the designed proteins were ordered from Twist
+Bioscience. The DNA sequences of the designed proteins were inserted between the NdeI and
+XhoI restriction sites, which added the DNA coding sequence for an N-terminal
+MGSSHHHHHHSSGLVPRGSHM tag to the designed proteins. Escherichia coli BL21(DE3)
+cells were transformed with the plasmid.
 '''
