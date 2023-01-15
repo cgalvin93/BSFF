@@ -35,7 +35,9 @@ Ala, Glu, Leu, and Met are most often found in helices whereas, Gly, Tyr, Ser, a
 Large aromatic residues (tyrosine, phenylalanine, tryptophan) and β-branched amino
 acids (threonine, valine, isoleucine)
 are favored to be found in β-strands in the middle of β-sheets.
-Different types of residues (such as proline) are likely to be found in the edge strands in β-sheets, presumably to avoid the "edge-to-edge" association between proteins that might lead to aggregation and amyloid formation
+Different types of residues (such as proline) are likely to be found in the edge strands in β-sheets,
+presumably to avoid the "edge-to-edge" association between proteins that might
+lead to aggregation and amyloid formation
 -----------------------------------------------------------------------------
 IN ADDITION, THERE ARE THE MATTERS OF ADDRESSING
     exposed hydrophobics

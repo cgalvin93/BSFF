@@ -1399,6 +1399,8 @@ print(len(f14))
 109
 82
 82
+
+scp -r cgalvin@log2.wynton.ucsf.edu:/wynton/home/kortemme/cgalvin/esl4rm_1_bestmatches/enzdes/filtered/analysis/run/filtered2/mpnn/resfiles/fd_mpnn/filtered2/refined/rt ~/desktop/refinement_esl4rm_results
 '''
 import os
 filtered_strc=[]
@@ -2727,6 +2729,17 @@ In [1]: import os
 
 In [2]: len(os.listdir())
 Out[2]: 5231
+
+import os
+l=[i for i in os.listdir() if i[-3:]=='pdb']
+l2=[i for i in os.listdir('refined/rt') if i[-3:]=='pdb']
+
+for i in l2:
+    s=('_').join(i.split('_')[:-1])
+    for i2 in l:
+        if s in i2:
+            os.system('cp '+i2+' refined/rt/'+i2)
+
 '''
 
 
