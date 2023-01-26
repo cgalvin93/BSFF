@@ -108,15 +108,8 @@ for fragmentmol in fragmolfiles:
     smilesresults[fragmentmol.split('.')[0]]=td
     print('\n\ndone')
     print(str(fragmentmol))
-    #
-    # td2={}
-    # td['Ligands']=inchiligands
-    # td['PDBs']=inchipdbs
-    # inchiresults[fragmentmol.split('.')[0]]=td2
-'''
-In [13]: len(list(pdb_ligands_json_data.keys()))
-Out[13]: 35320
-'''
+
+
 
 
 with open("PDB_search_results.json", "w") as outfile:

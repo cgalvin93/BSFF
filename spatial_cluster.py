@@ -1,39 +1,4 @@
-'''
-time python3 ~/BSFF/spatial_cluster.py /wynton/home/kortemme/cgalvin/dog/fragfbs/dog_Fragment_1_residue_contacts/dog_Fragment_1_SER_contact_fuzzball.pdb /wynton/home/kortemme/cgalvin/dog/Inputs/Rosetta_Inputs/dog_0001.pdb
 
-import os
-polar_residues=['LYS','ARG','ASP','GLU','SER','THR','GLN','ASN','HIS','TYR','TRP'] #ONLY TRUE POLAR
-l=[]
-for i in polar_residues:
-    for x in os.listdir():
-        if x[-3:]=='pdb':
-            if i in x:
-                l.append(os.path.join(os.getcwd(),x))
-
-f=open('spatial_clustering.sh','w')
-f.write('#!/bin/bash')
-f.write('\n')
-f.write('source ~/anaconda3/etc/profile.d/conda.sh')
-f.write('\n')
-f.write('conda activate pyr37')
-f.write('\n')
-f.write('tasks=(0\n')
-for match in l[:-1]:
-    f.write('       '+str(match)+'\n')
-f.write('       '+l[-1]+')')
-f.write('\n')
-cmd='time python3 ~/BSFF/spatial_cluster.py ${tasks[$SGE_TASK_ID]} /wynton/home/kortemme/cgalvin/dog/Inputs/Rosetta_Inputs/dog_0001.pdb'
-f.write(cmd)
-f.write('\nqstat -j "$JOB_ID"')
-f.close()
-
-print(len(l))
-
-mkdir cluster_output
-qsub -cwd -t 1-11 -l mem_free=8G -o cluster_output -e cluster_output spatial_clustering.sh
-
-scp -r cgalvin@log2.wynton.ucsf.edu:round6/a8s/a8sfragfbs/a8s_Fragment_1_residue_contacts/a8s_Fragment_1_ARG_contact_fuzzball_clustered ~/desktop/argex
-'''
 #
 import os
 import sys
@@ -116,10 +81,7 @@ def calc_rmsd(v1,v2):
 rfb=sys.argv[1]
 ligand_path=sys.argv[2]
 #
-'''
-rfb='/wynton/home/kortemme/cgalvin/dog/fragfbs/dog_Fragment_1_residue_contacts/dog_Fragment_1_SER_contact_fuzzball.pdb'
-ligand_path='/wynton/home/kortemme/cgalvin/dog/Inputs/Rosetta_Inputs/dog_0001.pdb'
-'''
+
 
 #
 pdfname=rfb.split('.')[0]+'_clustered.pdf'
@@ -2803,5 +2765,5 @@ so i guess the chronological move would be to
     match hybrid motifs which include specific idealized hbonds for atom:atom pairs
     pssm/genpot/cm etc. based design
     analysis and comparison with binders in pdb ...
-    
+
 '''
