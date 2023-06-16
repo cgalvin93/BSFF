@@ -9,13 +9,6 @@
     </ScoreFunction> -->
   </SCOREFXNS>
   <RESIDUE_SELECTORS>
-    <Chain name="chX" chains="X"/>
-    <Not name="all_but_chX">
-        <Chain chains="X"/>
-    </Not>
-    <Neighborhood name="chX_neighbors" distance="8.0">
-      <Chain chains="X"/>
-    </Neighborhood>
   </RESIDUE_SELECTORS>
   <TASKOPERATIONS>
     <ReadResfile name="resfile"/>

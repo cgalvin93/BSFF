@@ -101,7 +101,7 @@ for current_fragment in list(pdb_search_results_json_data.keys()):
         fpos = m.GetConformer().GetAtomPosition(i)
         fragment_coords.append((fpos.x,fpos.y,fpos.z))#m.GetAtomWithIdx(i).GetSymbol(),
     print('\nprocessing pdbs...')
-    if m.GetNumAtoms()<=10:
+    if m.GetNumAtoms()<=5:
         uselow=1
     else:
         uselow=0
