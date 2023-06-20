@@ -176,7 +176,7 @@ ofile.write('\nstart'+'\n')
 
 for i in range(1,p.total_residue()+1):
 	if i in designable:
-		s=str(p.pdb_info().pose2pdb(i))+'NOTAA CPM'
+		s=str(p.pdb_info().pose2pdb(i))+'NOTAA CP'
 		ofile.write(s+'\n')
 	# elif i in designable_aro:
 	# 	s=str(p.pdb_info().pose2pdb(i))+'PIKAA FWY'
