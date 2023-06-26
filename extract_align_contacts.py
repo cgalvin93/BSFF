@@ -4,7 +4,6 @@
 
 import json
 import sys
-import urllib.request
 import os
 from prody import *
 from rdkit import Chem
